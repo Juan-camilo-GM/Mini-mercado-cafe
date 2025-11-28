@@ -18,7 +18,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
   // TUS DATOS REALES (cambia estos valores)
   const NEQUI_NUMERO = "3001234567";
   const DAVIPLATA_NUMERO = "3009876543";
-  const NOMBRE_TITULAR = "María González";
+  const NOMBRE_TITULAR = "Johana González";
   const TU_NUMERO_WHATSAPP = "573117863431";
 
   useEffect(() => {
@@ -212,7 +212,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y terrem-auto p-5">
+            <div className="flex-1 overflow-auto p-5">
               {carrito.length === 0 ? (
                 <p className="text-center text-gray-500 py-10">Tu carrito está vacío</p>
               ) : (
@@ -429,7 +429,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
               {pago === "efectivo" && entrega === "domicilio" && (
                 <div className="animate-in slide-in-from-bottom duration-300">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ¿Con cuánto pagas? (opcional, para el cambio)
+                    ¿Con cuánto pagas? (para el cambio)
                   </label>
                   <input
                     type="number"

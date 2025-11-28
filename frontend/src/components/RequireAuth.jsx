@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-// Rutas corregidas para acceder a 'lib' y 'components' desde 'pages/admin'
 import { supabase } from "../lib/supabase"; 
 import { Navigate } from "react-router-dom";
 import SessionLoader from ".//SessionLoader"; 

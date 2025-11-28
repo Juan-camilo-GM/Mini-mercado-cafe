@@ -46,7 +46,7 @@ export default function HistorialPedidos() {
     fetchPedidos();
   };
 
-  // FILTRO 100% CORRECTO CON ZONA HORARIA COLOMBIA (UTC-5)
+  // FILTRO CON ZONA HORARIA COLOMBIA (UTC-5)
   const pedidosFiltrados = useMemo(() => {
     return pedidos.filter((p) => {
       // Convertir created_at (UTC) a hora local Colombia
@@ -76,8 +76,21 @@ export default function HistorialPedidos() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-2xl font-bold text-indigo-600">Cargando pedidos...</div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="flex flex-col items-center space-y-4">
+          
+          {/* El Spinner con una animación de giro */}
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent border-solid rounded-full animate-spin"></div>
+          
+          {/* Texto de carga mejorado */}
+          <div className="text-xl font-semibold text-gray-700">Cargando pedidos...</div>
+          
+          {/* Opcional: una barra de progreso que late para dar sensación de actividad */}
+          <div className="w-32 h-1 bg-indigo-200 rounded-full overflow-hidden">
+            <div className="h-full bg-indigo-500 animate-pulse"></div>
+          </div>
+          
+        </div>
       </div>
     );
   }

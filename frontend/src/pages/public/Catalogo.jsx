@@ -1,7 +1,37 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { obtenerProductos } from "../../lib/productos";
 import { obtenerCategorias } from "../../lib/categorias";
 import CarritoFlotante from "../../components/CarritoFlotante";
+
+// Componente de Skeleton para tarjetas de producto
+function ProductoSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
+      {/* Imagen skeleton */}
+      <div className="aspect-square bg-gray-200"></div>
+      
+      {/* Contenido skeleton */}
+      <div className="p-3 pt-2 space-y-3">
+        {/* Categoría */}
+        <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+        
+        {/* Título */}
+        <div className="space-y-2">
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+        </div>
+        
+        {/* Precio */}
+        <div className="border-t border-gray-100 pt-3 mt-3">
+          <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+        </div>
+        
+        {/* Botón */}
+        <div className="h-10 bg-gray-200 rounded-xl mt-3"></div>
+      </div>
+    </div>
+  );
+}
 
 export default function Catalogo() {
   const [productos, setProductos] = useState([]);
@@ -10,15 +40,30 @@ export default function Catalogo() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [carrito, setCarrito] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  
+  // Estados para paginación infinita
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const PRODUCTOS_POR_PAGINA = 24;
+  
+  const observerTarget = useRef(null);
 
   // Cargar productos y categorías
   useEffect(() => {
     async function cargarDatos() {
-      const prods = await obtenerProductos();
-      const cats = await obtenerCategorias();
-      setProductos(prods);
-      setCategorias(cats);
-      setCatMap(Object.fromEntries(cats.map(c => [c.id, c.nombre])));
+      setCargando(true);
+      try {
+        const prods = await obtenerProductos();
+        const cats = await obtenerCategorias();
+        setProductos(prods);
+        setCategorias(cats);
+        setCatMap(Object.fromEntries(cats.map(c => [c.id, c.nombre])));
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+      } finally {
+        setCargando(false);
+      }
     }
     cargarDatos();
   }, []);
@@ -41,6 +86,45 @@ export default function Catalogo() {
       return coincideTexto && coincideCategoria;
     });
   }, [productos, busqueda, filtroCategoria]);
+
+  // Productos visibles según la página actual
+  const productosVisibles = useMemo(() => {
+    return productosFiltrados.slice(0, paginaActual * PRODUCTOS_POR_PAGINA);
+  }, [productosFiltrados, paginaActual]);
+
+  const hayMasProductos = productosVisibles.length < productosFiltrados.length;
+
+  // Resetear página cuando cambian los filtros
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [busqueda, filtroCategoria]);
+
+  // Intersection Observer para cargar más productos automáticamente
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hayMasProductos && !cargandoMas && !cargando) {
+          setCargandoMas(true);
+          // Simular delay de carga para mejor UX
+          setTimeout(() => {
+            setPaginaActual(prev => prev + 1);
+            setCargandoMas(false);
+          }, 300);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hayMasProductos, cargandoMas, cargando]);
 
   const agregarAlCarrito = (producto) => {
     const existe = carrito.find(p => p.id === producto.id);
@@ -65,8 +149,23 @@ export default function Catalogo() {
 
   return (
     <div className="p-4 md:p-10 bg-gray-50/50 border-b min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8 pt-5">Nuestros Productos</h1>
+      <h1 className="text-5xl md:text-7xl font-black mb-12 pt-8 leading-tight tracking-tight">
+        {/* Palabra principal con gradiente púrpura-índigo exacto */}
+        <span className="text-transparent bg-clip-text 
+                        bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-700
+                        drop-shadow-[0_0_25px_rgba(139,92,246,0.45)]">
+          Todo
+        </span>
 
+        {/* Palabra secundaria en color sólido oscuro para máximo contraste */}
+        <span className="text-gray-900">Fresco</span>
+
+        {/* Subtítulo – elige el que más te represente */}
+        <br />
+        <span className="text-3xl md:text-4xl font-bold text-purple-300 block mt-3">
+          Calidad y precio que te conviene
+        </span>
+      </h1>
       {/* Filtros elegantes */}
       <div className="flex flex-col lg:flex-row gap-4 mb-8">
         {/* Buscador */}
@@ -79,15 +178,15 @@ export default function Catalogo() {
           </div>
           <input
             type="text"
-            placeholder="Buscar producto..."
+            placeholder="¿Qué estás buscando?"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
+            disabled={cargando}
             className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl shadow-sm 
                       focus:ring-2 focus:ring-indigo-500 focus:border-transparent 
                       transition-all duration-200 text-gray-900 placeholder-gray-400
-                      focus:outline-none"
+                      focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          {/* Limpieza rápida si hay texto */}
           {busqueda && (
             <button
               onClick={() => setBusqueda("")}
@@ -105,10 +204,11 @@ export default function Catalogo() {
           <select
             value={filtroCategoria}
             onChange={(e) => setFiltroCategoria(e.target.value)}
+            disabled={cargando}
             className="appearance-none bg-white border border-gray-200 rounded-xl px-5 py-3.5 pr-12 
                       shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent 
                       transition-all duration-200 text-gray-900 font-medium
-                      focus:outline-none cursor-pointer w-full lg:w-64"
+                      focus:outline-none cursor-pointer w-full lg:w-64 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">Todas las categorías</option>
             {categorias.map((c) => (
@@ -117,121 +217,169 @@ export default function Catalogo() {
               </option>
             ))}
           </select>
-          {/* Flecha personalizada */}
           <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
             <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </div>
-
       </div>
 
-      {/* Opcional: mostrar resultados encontrados */}
-      {productosFiltrados.length !== productos.length && (
+      {/* Contador de resultados */}
+      {!cargando && productosFiltrados.length !== productos.length && (
         <div className="mb-4 text-sm text-gray-600">
-          Mostrando <span className="font-semibold text-indigo-600">{productosFiltrados.length}</span> de{" "}
-          <span className="font-semibold">{productos.length}</span> productos
+          Mostrando <span className="font-semibold text-indigo-600">{productosVisibles.length}</span> de{" "}
+          <span className="font-semibold">{productosFiltrados.length}</span> productos
         </div>
       )}
 
-      {/* Productos */}
-     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 py-6">
-  {productosFiltrados.map((p) => {
-    const estaAgotado = p.stock === 0;
-    const pocoStock = p.stock > 0 && p.stock <= 5;
+      {/* Grid de productos o skeletons */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 py-6">
+        {cargando ? (
+          // Mostrar 12 skeletons mientras carga
+          Array.from({ length: 12 }).map((_, i) => (
+            <ProductoSkeleton key={i} />
+          ))
+        ) : productosFiltrados.length === 0 ? (
+          // Mensaje cuando no hay resultados
+          <div className="col-span-full text-center py-12">
+            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-gray-500 text-lg font-medium">No se encontraron productos</p>
+            <p className="text-gray-400 text-sm mt-2">Intenta con otros términos de búsqueda</p>
+          </div>
+        ) : (
+          // Mostrar productos
+          productosVisibles.map((p) => {
+            const estaAgotado = p.stock === 0;
+            const pocoStock = p.stock > 0 && p.stock <= 5;
 
-    return (
-      <article
-        key={p.id}
-        className={`group relative bg-white rounded-2xl transition-all duration-300 overflow-hidden 
-          ${estaAgotado 
-            ? "opacity-60 grayscale" 
-            : "shadow-lg hover:shadow-2xl hover:-translate-y-1" // Elegante elevación y sombra en hover
-          }`}
+            return (
+              <article
+  key={p.id}
+  className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-400 flex flex-col h-full
+    ${estaAgotado 
+      ? "opacity-65 grayscale" 
+      : "shadow-xl hover:shadow-2xl hover:-translate-y-2 ring-1 ring-gray-100"
+    }`}
+>
+  {/* Imagen */}
+  <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 sm:aspect-square">
+    <img
+      src={p.imagen_url || "/placeholder.jpg"}
+      alt={p.nombre}
+      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+      loading="lazy"
+    />
+
+    {/* Badge categoría */}
+    <span className={`absolute top-3 left-3 px-3.5 py-1.5 rounded-full text-white text-xs font-bold shadow-lg z-10
+      ${p.categoria_id === 1 ? "bg-orange-500" :
+        p.categoria_id === 2 ? "bg-emerald-600" :
+        p.categoria_id === 3 ? "bg-sky-600" :
+        p.categoria_id === 4 ? "bg-pink-600" : "bg-purple-600"}`}>
+      {catMap[p.categoria_id] || "General"}
+    </span>
+
+    {pocoStock && (
+      <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse">
+        ¡Últimas {p.stock}!
+      </span>
+    )}
+
+    {estaAgotado && (
+      <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
+        <span className="bg-red-600 text-white font-black text-2xl px-8 py-3 rounded-2xl shadow-2xl">
+          AGOTADO
+        </span>
+      </div>
+    )}
+  </div>
+
+  {/* Texto y precio */}
+  <div className="p-4 pb-3 sm:p-5 sm:pb-3 flex flex-col flex-1">
+    <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight line-clamp-2">
+      {p.nombre}
+    </h3>
+
+    <div className="mt-2 sm:mt-3">
+      <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-700">
+        ${parseFloat(p.precio).toLocaleString("es-AR")}
+      </span>
+    </div>
+  </div>
+
+  {/* BOTÓN – Compacto en móvil, grande en escritorio */}
+  {!estaAgotado ? (
+    <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+      <button
+        onClick={() => agregarAlCarrito(p)}
+        className="
+          w-full flex items-center justify-center gap-2 sm:gap-3
+          bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl sm:rounded-2xl
+          shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl active:scale-98 transition-all duration-300
+          
+          /* MÓVIL: estilo compacto y elegante como tu admin */
+          py-3 text-sm
+          [&>svg]:w-5 [&>svg]:h-5
+          
+          /* Desde sm (640px): vuelve al diseño premium grande */
+          sm:py-4 sm:text-lg sm:[&>svg]:w-7 sm:[&>svg]:h-7
+        "
       >
-        {/* IMAGEN Y BOTÓN FLOTANTE */}
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
-          {p.imagen_url ? (
-            <img
-              src={p.imagen_url}
-              alt={p.nombre}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center bg-gray-100 text-gray-400 text-xs font-medium">Sin imagen</div>
-          )}
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M3 3h2l.4 2M7.5 13h9l3.5-8H5.9M7.5 13L5.9 5M7.5 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        <span className="hidden xxs:inline">Añadir al carrito</span>
+        <span className="xxs:hidden">Añadir</span>
+      </button>
+    </div>
+  ) : (
+    <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+      <button 
+        disabled 
+        className="w-full py-3 sm:py-4 text-sm sm:text-lg font-bold bg-gray-300 text-gray-600 rounded-xl sm:rounded-2xl cursor-not-allowed"
+      >
+        Sin stock
+      </button>
+    </div>
+  )}
+</article>
+            );
+          })
+        )}
+      </div>
 
-          {/* OVERLAY SUTIL EN HOVER PARA LA IMAGEN */}
-          {!estaAgotado && (
-            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          )}
-
-          {/* Badge poco stock */}
-          {pocoStock && (
-            <span className="absolute top-3 left-3 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg z-10">
-              ¡Solo quedan {p.stock}!
-            </span>
-          )}
-
-          {/* Agotado */}
-          {estaAgotado && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-20">
-              <span className="text-white font-bold text-lg tracking-wider border-2 border-white px-3 py-1.5 rounded-lg">AGOTADO</span>
-            </div>
-          )}
-
-          {/* BOTÓN FLOTANTE DE AÑADIR (Más prominente y con degradado) */}
-          {!estaAgotado && (
-            <button
-              onClick={() => agregarAlCarrito(p)}
-              className="absolute bottom-3 right-3 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full shadow-xl flex items-center justify-center 
-                         text-white text-2xl font-bold opacity-0 group-hover:opacity-100 group-hover:bottom-4 
-                         transition-all duration-300 active:scale-90 z-10"
-              aria-label="Agregar al carrito"
-            >
-              +
-            </button>
-          )}
+      {/* Loading indicator para cargar más productos */}
+      {cargandoMas && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 pb-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <ProductoSkeleton key={`loading-${i}`} />
+          ))}
         </div>
+      )}
 
-        {/* CONTENIDO DE TEXTO (P-3) */}
-        <div className="p-3 pt-2 space-y-1 flex flex-col justify-between h-auto">
-          <div>
-            <p className="text-[11px] text-gray-500 font-medium uppercase tracking-wider mb-1">
-              {catMap[p.categoria_id] || "General"}
-            </p>
-
-            <h3 className="font-semibold text-gray-900 line-clamp-2 text-base leading-snug min-h-[3rem]" title={p.nombre}>
-              {p.nombre}
-            </h3>
+      {/* Elemento observador para infinite scroll */}
+      {hayMasProductos && !cargandoMas && !cargando && (
+        <div ref={observerTarget} className="h-20 flex items-center justify-center">
+          <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Cargando más productos...
           </div>
-
-          <div className="flex items-center justify-between border-t border-gray-100 pt-3 mt-3">
-            {/* Precio impactante con tu paleta de colores */}
-            <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-700">
-              ${parseFloat(p.precio).toLocaleString("es-AR")}
-            </span>
-          </div>
-
-          {/* BOTÓN PRINCIPAL (Con degradado y efecto hover/active) */}
-          <button
-            onClick={() => !estaAgotado && agregarAlCarrito(p)}
-            disabled={estaAgotado}
-            className={`w-full mt-3 py-2.5 text-sm font-bold rounded-xl transition-all duration-200 shadow-lg 
-              ${estaAgotado
-                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                : "bg-gradient-to-r from-indigo-600 to-purple-700 text-white hover:from-indigo-700 hover:to-purple-800 active:scale-[0.98] active:shadow-md"
-              }`}
-          >
-            {estaAgotado ? "Agotado" : "Añadir al carrito "}
-          </button>
         </div>
-      </article>
-    );
-  })}
-</div>
+      )}
+
+      {/* Mensaje cuando se cargaron todos los productos */}
+      {!cargando && productosVisibles.length > 0 && !hayMasProductos && productosFiltrados.length > PRODUCTOS_POR_PAGINA && (
+        <div className="text-center py-8 text-gray-500 text-sm border-t border-gray-200 mt-6">
+          ✓ Has visto todos los productos disponibles
+        </div>
+      )}
 
       {/* Carrito siempre activo */}
       <CarritoFlotante carrito={carrito} setCarrito={setCarrito} />

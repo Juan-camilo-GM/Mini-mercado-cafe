@@ -9,3 +9,16 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+body {
+  background: linear-gradient(135deg, 
+      #f8f4ff 0%,
+      #f0efff 30%, 
+      #e8f4ff 70%, 
+      #e0f2fe 100%
+  );
+  background-attachment: fixed;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
