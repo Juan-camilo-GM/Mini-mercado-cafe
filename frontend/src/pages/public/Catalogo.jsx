@@ -275,19 +275,23 @@ export default function Catalogo() {
 
                   {/* Badge categoría */}
                   <span className={`absolute top-3 left-3 px-3.5 py-1.5 rounded-full text-white text-xs font-bold shadow-lg z-10
+                          max-w-[100px] sm:max-w-[120px] md:max-w-[150px] lg:max-w-none truncate
                     ${p.categoria_id === 1 ? "bg-orange-500" :
                       p.categoria_id === 2 ? "bg-emerald-600" :
                       p.categoria_id === 3 ? "bg-sky-600" :
-                      p.categoria_id === 4 ? "bg-pink-600" : "bg-purple-600"}`}>
+                      p.categoria_id === 4 ? "bg-amber-600" :
+                      p.categoria_id === 5 ? "bg-yellow-600" :
+                      p.categoria_id === 6 ? "bg-lime-600" :
+                      p.categoria_id === 7 ? "bg-green-600" :
+                      p.categoria_id === 8 ? "bg-violet-600" :
+                      p.categoria_id === 9 ? "bg-pink-600" : "bg-purple-600"}`}>
                     {catMap[p.categoria_id] || "General"}
                   </span>
 
-                  {/* Badge poco stock – SOLUCIÓN APLICADA AQUÍ */}
+                  {/* Badge poco stock*/}
                   {pocoStock && (
                     <span className="absolute 
-                      top-12 left-3            /* ← MÓVIL: debajo del badge de categoría */
-                      sm:top-3 sm:left-auto sm:right-3   /* ← DESDE sm: posición original a la derecha */
-                      bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse z-10
+                      bottom-3 right-1 bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse z-10
                     ">
                       ¡Solo Quedan {p.stock}!
                     </span>
