@@ -58,11 +58,11 @@ export default function BotonCerrarTienda() {
     <button
       onClick={toggleTienda}
       disabled={loading}
-      className={`${baseClasses} ${estadoClasses} ${loadingClasses} relative w-full`}
+      className={`${baseClasses} ${estadoClasses} ${loadingClasses} relative w-full cursor-pointer`}
     >
       <IoStorefrontOutline className="text-xl" />
       <span className="min-w-20 text-center">
-        {loading ? "..." : cerrada ? "CERRADA" : "ABIERTA"}
+        {loading ? "..." : cerrada ? "Cerrada" : "Abierta"}
       </span>
 
       {/* Spinner discreto solo cuando carga */}

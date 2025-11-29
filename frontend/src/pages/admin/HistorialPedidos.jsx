@@ -8,17 +8,34 @@ import {
   IoCalendarOutline,
   IoPersonOutline,
   IoCashOutline,
+  IoTrendingUp,
+  IoCartOutline,
+  IoTimeOutline,
+  IoDownloadOutline,
 } from "react-icons/io5";
-import { format, parseISO } from "date-fns";
-import { es } from "date-fns/locale"; // ← Para español perfecto
+import { format, subDays, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-export default function HistorialPedidos() {
+export default function DashboardPedidos() {
   const [pedidos, setPedidos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtro, setFiltro] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
-  const [fechaSeleccionada, setFechaSeleccionada] = useState("");
+  const [fechaInicio, setFechaInicio] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
+  const [fechaFin, setFechaFin] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [pagina, setPagina] = useState(1);
+  const itemsPorPagina = 12;
 
+  // Cargar pedidos
   const fetchPedidos = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -26,8 +43,9 @@ export default function HistorialPedidos() {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) console.error(error);
+    if (error) console.error("Error cargando pedidos:", error);
     else setPedidos(data || []);
+
     setLoading(false);
   };
 
@@ -35,6 +53,7 @@ export default function HistorialPedidos() {
     fetchPedidos();
   }, []);
 
+  // Acciones
   const actualizarEstado = async (id, nuevoEstado) => {
     await supabase.from("pedidos").update({ estado: nuevoEstado }).eq("id", id);
     fetchPedidos();
@@ -46,234 +65,316 @@ export default function HistorialPedidos() {
     fetchPedidos();
   };
 
-  // FILTRO CON ZONA HORARIA COLOMBIA (UTC-5)
-  const pedidosFiltrados = useMemo(() => {
+  // Filtrado
+  const datosFiltrados = useMemo(() => {
     return pedidos.filter((p) => {
-      // Convertir created_at (UTC) a hora local Colombia
-      const fechaUTC = parseISO(p.created_at);
-      const fechaColombia = new Date(fechaUTC.getTime() - 5 * 60 * 60 * 1000);
-
-      const clienteMatch = p.cliente_nombre
-        ?.toLowerCase()
-        .includes(filtro.toLowerCase());
-      const estadoMatch = estadoFiltro === "" || p.estado === estadoFiltro;
-      const fechaMatch =
-        !fechaSeleccionada ||
-        format(fechaColombia, "yyyy-MM-dd") === fechaSeleccionada;
-
-      return clienteMatch && estadoMatch && fechaMatch;
+      const fecha = format(new Date(p.created_at), "yyyy-MM-dd");
+      const enRango = fecha >= fechaInicio && fecha <= fechaFin;
+      const cliente = p.cliente_nombre?.toLowerCase().includes(filtro.toLowerCase());
+      const estado = estadoFiltro === "" || p.estado === estadoFiltro;
+      return enRango && cliente && estado;
     });
-  }, [pedidos, filtro, estadoFiltro, fechaSeleccionada]);
+  }, [pedidos, filtro, estadoFiltro, fechaInicio, fechaFin]);
 
-  // Total ventas confirmadas del día seleccionado
-  const totalVentasConfirmadas = pedidosFiltrados
+  // Métricas clave
+  const hoy = format(new Date(), "yyyy-MM-dd");
+  const ventasHoy = datosFiltrados
+    .filter((p) => format(new Date(p.created_at), "yyyy-MM-dd") === hoy && p.estado === "confirmado")
+    .reduce((acc, p) => acc + parseInt(p.total || 0), 0);
+
+  const ventasPeriodo = datosFiltrados
     .filter((p) => p.estado === "confirmado")
     .reduce((acc, p) => acc + parseInt(p.total || 0), 0);
 
-  const pedidosConfirmadosCount = pedidosFiltrados.filter(
-    (p) => p.estado === "confirmado"
-  ).length;
+  const pedidosPendientes = datosFiltrados.filter((p) => p.estado === "pendiente").length;
+
+  const pedidosConfirmados = datosFiltrados.filter((p) => p.estado === "confirmado").length;
+  const ticketPromedio = pedidosConfirmados > 0 ? Math.round(ventasPeriodo / pedidosConfirmados) : 0;
+
+  // Gráfico últimos 7 días
+  const ultimos7Dias = Array.from({ length: 7 }, (_, i) => {
+    const fecha = subDays(new Date(), 6 - i);
+    const fechaStr = format(fecha, "yyyy-MM-dd");
+    const ventas = datosFiltrados
+      .filter((p) => format(new Date(p.created_at), "yyyy-MM-dd") === fechaStr && p.estado === "confirmado")
+      .reduce((acc, p) => acc + parseInt(p.total || 0), 0);
+
+    return {
+      dia: format(fecha, "EEE", { locale: es }),
+      fecha: format(fecha, "d MMM", { locale: es }),
+      ventas,
+    };
+  });
+
+  // Top 5 productos
+  const topProductos = useMemo(() => {
+    const mapa = {};
+    datosFiltrados.forEach((p) => {
+      if (p.estado !== "confirmado") return;
+      p.productos.forEach((prod) => {
+        mapa[prod.nombre] = (mapa[prod.nombre] || 0) + prod.cantidad;
+      });
+    });
+    return Object.entries(mapa)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([nombre, cantidad]) => ({ nombre, cantidad }));
+  }, [datosFiltrados]);
+
+  // Exportar CSV sin dependencias externas
+  const exportarCSV = () => {
+    const encabezado = ["Fecha", "Cliente", "Estado", "Total", "Productos"];
+    const filas = datosFiltrados.map((p) => [
+      format(new Date(p.created_at), "dd/MM/yyyy HH:mm"),
+      p.cliente_nombre,
+      p.estado.toUpperCase(),
+      parseInt(p.total),
+      p.productos.map((pr) => `${pr.nombre} x${pr.cantidad}`).join(" | "),
+    ]);
+
+    const csvContent = [
+      encabezado.join(","),
+      ...filas.map((fila) => fila.map((campo) => `"${campo}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `ventas_${fechaInicio}_a_${fechaFin}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Paginación
+  const totalPaginas = Math.ceil(datosFiltrados.length / itemsPorPagina);
+  const pedidosPaginados = datosFiltrados.slice((pagina - 1) * itemsPorPagina, pagina * itemsPorPagina);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
-        <div className="flex flex-col items-center space-y-4">
-          
-          {/* El Spinner con una animación de giro */}
-          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent border-solid rounded-full animate-spin"></div>
-          
-          {/* Texto de carga mejorado */}
-          <div className="text-xl font-semibold text-gray-700">Cargando pedidos...</div>
-          
-          {/* Opcional: una barra de progreso que late para dar sensación de actividad */}
-          <div className="w-32 h-1 bg-indigo-200 rounded-full overflow-hidden">
-            <div className="h-full bg-indigo-500 animate-pulse"></div>
-          </div>
-          
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-xl font-semibold text-gray-700">Cargando dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
-          Historial de Pedidos
-        </h1>
-        <p className="text-xl text-gray-600 mb-8">{pedidos.length} pedidos registrados</p>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* FILTROS */}
-        <div className="bg-white rounded-2xl shadow-lg border p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <IoSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Buscar cliente..."
-                value={filtro}
-                onChange={(e) => setFiltro(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 border rounded-xl focus:ring-2 focus:ring-indigo-500"
-              />
+        {/* Header + Exportar */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-extrabold text-gray-900">Dashboard de Ventas</h1>
+            <p className="text-lg text-gray-600">Minimercado • Control total de pedidos y ganancias</p>
+          </div>
+          <button
+            onClick={exportarCSV}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-lg"
+          >
+            <IoDownloadOutline size={20} />
+            Exportar CSV
+          </button>
+        </div>
+
+        {/* Tarjetas de métricas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Ventas hoy</p>
+                <p className="text-3xl font-black text-emerald-600 mt-1">
+                  ${ventasHoy.toLocaleString("es-CO")}
+                </p>
+              </div>
+              <IoTrendingUp className="text-5xl text-emerald-200 opacity-70" />
             </div>
+          </div>
 
+          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total período</p>
+                <p className="text-3xl font-black text-indigo-600 mt-1">
+                  ${ventasPeriodo.toLocaleString("es-CO")}
+                </p>
+              </div>
+              <IoCashOutline className="text-5xl text-indigo-200 opacity-70" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pedidos pendientes</p>
+                <p className="text-3xl font-black text-amber-600 mt-1">{pedidosPendientes}</p>
+              </div>
+              <IoTimeOutline className="text-5xl text-amber-200 opacity-70" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Ticket promedio</p>
+                <p className="text-3xl font-black text-purple-600 mt-1">
+                  ${ticketPromedio.toLocaleString("es-CO")}
+                </p>
+              </div>
+              <IoCartOutline className="text-5xl text-purple-200 opacity-70" />
+            </div>
+          </div>
+        </div>
+
+        {/* Filtros + Gráfico */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border space-y-5">
+            <h3 className="text-xl font-bold text-gray-800">Filtros</h3>
+            <input
+              type="text"
+              placeholder="Buscar cliente..."
+              value={filtro}
+              onChange={(e) => setFiltro(e.target.value)}
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
             <select
               value={estadoFiltro}
               onChange={(e) => setEstadoFiltro(e.target.value)}
-              className="px-5 py-3.5 border rounded-xl focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             >
               <option value="">Todos los estados</option>
               <option value="pendiente">Pendiente</option>
               <option value="confirmado">Confirmado</option>
               <option value="cancelado">Cancelado</option>
             </select>
+            <div className="grid grid-cols-2 gap-3">
+              <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="px-4 py-3 border rounded-xl" />
+              <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className="px-4 py-3 border rounded-xl" />
+            </div>
+          </div>
 
-            <div className="relative">
-              <IoCalendarOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="date"
-                value={fechaSeleccionada}
-                onChange={(e) => setFechaSeleccionada(e.target.value)}
-                className="w-full pl-12 pr-10 py-3.5 border rounded-xl focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              />
-              {fechaSeleccionada && (
-                <button
-                  onClick={() => setFechaSeleccionada("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 hover:text-red-700 text-xl"
-                >
-                  ×
-                </button>
+          <div className="xl:col-span-2 bg-white rounded-2xl shadow-lg p-6 border">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Ventas últimos 7 días</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={ultimos7Dias}>
+                <CartesianGrid strokeDasharray="4 4" />
+                <XAxis dataKey="dia" />
+                <YAxis />
+                <Tooltip formatter={(value) => `$${value.toLocaleString("es-CO")}`} />
+                <Bar dataKey="ventas" fill="#6366f1" radius={8} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Top productos + Tabla */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="bg-white rounded-2xl shadow-lg p-6 border">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Top 5 productos</h3>
+            <div className="space-y-3">
+              {topProductos.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No hay ventas confirmadas</p>
+              ) : (
+                topProductos.map((p, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                    <span className="font-medium">{i + 1}. {p.nombre}</span>
+                    <span className="font-bold text-indigo-600">{p.cantidad} und</span>
+                  </div>
+                ))
               )}
             </div>
           </div>
 
-          {(filtro || estadoFiltro || fechaSeleccionada) && (
-            <button
-              onClick={() => {
-                setFiltro("");
-                setEstadoFiltro("");
-                setFechaSeleccionada("");
-              }}
-              className="mt-4 text-indigo-600 hover:underline font-medium"
-            >
-              Limpiar filtros
-            </button>
-          )}
-        </div>
-
-        {/* TOTAL VENTAS CONFIRMADAS EN ESPAÑOL */}
-        {fechaSeleccionada && pedidosFiltrados.length > 0 && (
-          <div className="bg-gradient-to-r from-emerald-600 to-green-700 text-white rounded-2xl shadow-2xl p-8 mb-8">
-            <div className="grid md:grid-cols-2 gap-6 items-center">
-              <div>
-                <p className="text-2xl font-bold opacity-90">Ventas confirmadas del día</p>
-                <p className="text-4xl font-extrabold mt-2">
-                  {format(parseISO(fechaSeleccionada + "T12:00:00"), "EEEE, d 'de' MMMM yyyy", { locale: es })}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-5xl font-black">
-                  ${totalVentasConfirmadas.toLocaleString("es-CO")}
-                </p>
-                <p className="text-xl mt-3 opacity-90">
-                  {pedidosConfirmadosCount} {pedidosConfirmadosCount === 1 ? "pedido" : "pedidos"} confirmado(s)
-                </p>
-              </div>
+          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg border overflow-hidden">
+            <div className="p-6 border-b bg-gray-50">
+              <h3 className="text-xl font-bold text-gray-800">Pedidos recientes ({datosFiltrados.length})</h3>
             </div>
-          </div>
-        )}
-
-        {/* LISTA DE PEDIDOS - TARJETAS COMPACTAS Y BONITAS */}
-        <div className="space-y-6">
-          {pedidosFiltrados.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-2xl shadow-lg border">
-              <p className="text-2xl text-gray-500 font-medium">
-                {fechaSeleccionada
-                  ? `No hay pedidos el ${format(parseISO(fechaSeleccionada + "T12:00:00"), "d 'de' MMMM yyyy", { locale: es })}`
-                  : "No se encontraron pedidos"}
-              </p>
-            </div>
-          ) : (
-            pedidosFiltrados.map((p) => {
-              const fechaColombia = new Date(new Date(p.created_at).getTime() - 5 * 60 * 60 * 1000);
-
-              return (
-                <div
-                  key={p.id}
-                  className="bg-white rounded-2xl shadow-lg border hover:shadow-xl transition-shadow p-6"
-                >
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Cliente + Fecha */}
-                    <div>
-                      <h3 className="text-xl font-bold flex items-center gap-2">
-                        <IoPersonOutline className="text-indigo-600" />
-                        {p.cliente_nombre}
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                        <IoCalendarOutline />
-                        {format(fechaColombia, "d 'de' MMMM yyyy • HH:mm", { locale: es })}
-                      </p>
-                      <span
-                        className={`inline-block mt-3 px-4 py-2 rounded-full text-sm font-bold
-                          ${p.estado === "pendiente" ? "bg-amber-100 text-amber-800" :
-                            p.estado === "confirmado" ? "bg-emerald-100 text-emerald-800" :
-                            "bg-rose-100 text-rose-800"}`}
-                      >
-                        {p.estado.toUpperCase()}
-                      </span>
-                    </div>
-
-                    {/* Productos + Total */}
-                    <div>
-                      <div className="space-y-2 mb-4">
-                        {p.productos.map((prod, i) => (
-                          <div key={i} className="bg-gray-50 rounded-lg px-4 py-2 flex justify-between text-sm">
-                            <span>{prod.nombre}</span>
-                            <span className="font-bold text-indigo-600">×{prod.cantidad}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <IoCashOutline className="text-2xl text-indigo-600" />
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-5 py-3 text-left font-medium text-gray-700">Cliente / Fecha</th>
+                    <th className="px-5 py-3 text-left font-medium text-gray-700">Total</th>
+                    <th className="px-5 py-3 text-left font-medium text-gray-700">Estado</th>
+                    <th className="px-5 py-3 text-left font-medium text-gray-700">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {pedidosPaginados.map((p) => (
+                    <tr key={p.id} className="hover:bg-gray-50">
+                      <td className="px-5 py-4">
                         <div>
-                          <p className="text-sm text-gray-600">Total</p>
-                          <p className="text-2xl font-black text-indigo-600">
-                            ${parseInt(p.total).toLocaleString("es-CO")}
+                          <p className="font-medium">{p.cliente_nombre}</p>
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(p.created_at), "d MMM yyyy • HH:mm", { locale: es })}
                           </p>
                         </div>
-                      </div>
-                    </div>
+                      </td>
+                      <td className="px-5 py-4 font-bold text-indigo-600">
+                        ${parseInt(p.total).toLocaleString("es-CO")}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                          p.estado === "confirmado" ? "bg-emerald-100 text-emerald-800" :
+                          p.estado === "pendiente" ? "bg-amber-100 text-amber-800" :
+                          "bg-rose-100 text-rose-800"
+                        }`}>
+                          {p.estado.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex gap-2">
+                          {p.estado !== "confirmado" && (
+                            <button onClick={() => actualizarEstado(p.id, "confirmado")} className="text-emerald-600 hover:text-emerald-800">
+                              <IoCheckmarkCircle size={19} />
+                            </button>
+                          )}
+                          {p.estado !== "cancelado" && (
+                            <button onClick={() => actualizarEstado(p.id, "cancelado")} className="text-rose-600 hover:text-rose-800">
+                              <IoCloseCircle size={19} />
+                            </button>
+                          )}
+                          <button onClick={() => eliminarPedido(p.id)} className="text-gray-600 hover:text-gray-800">
+                            <IoTrashBin size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                    {/* Botones */}
-                    <div className="flex flex-col gap-3">
-                      {p.estado !== "confirmado" && (
-                        <button
-                          onClick={() => actualizarEstado(p.id, "confirmado")}
-                          className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                        >
-                          <IoCheckmarkCircle /> Confirmar
-                        </button>
-                      )}
-                      {p.estado !== "cancelado" && (
-                        <button
-                          onClick={() => actualizarEstado(p.id, "cancelado")}
-                          className="px-5 py-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                        >
-                          <IoCloseCircle /> Cancelar
-                        </button>
-                      )}
-                      <button
-                        onClick={() => eliminarPedido(p.id)}
-                        className="px-5 py-3 bg-gray-700 hover:bg-gray-800 text-white font-bold rounded-xl flex items-center justify-center gap-2"
-                      >
-                        <IoTrashBin /> Eliminar
-                      </button>
-                    </div>
-                  </div>
+            {/* Paginación */}
+            {totalPaginas > 1 && (
+              <div className="px-6 py-4 border-t flex justify-between items-center text-sm">
+                <span className="text-gray-600">
+                  Mostrando {(pagina - 1) * itemsPorPagina + 1}–{Math.min(pagina * itemsPorPagina, datosFiltrados.length)} de {datosFiltrados.length}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                    disabled={pagina === 1}
+                    className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                    disabled={pagina === totalPaginas}
+                    className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Siguiente
+                  </button>
                 </div>
-              );
-            })
-          )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

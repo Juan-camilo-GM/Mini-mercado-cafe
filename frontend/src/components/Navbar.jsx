@@ -27,7 +27,7 @@ export default function Navbar() {
   // VISTA ADMIN
   const adminLinks = [
     { to: "/admin", label: "Panel Principal", icon: <IoGrid className="text-xl" /> },
-    { to: "/admin/historial", label: "Historial", icon: <IoTime className="text-xl" /> },
+    { to: "/admin/historial", label: "Dashboard", icon: <IoTime className="text-xl" /> },
   ];
 
   const links = pathname.startsWith("/admin") && isAdminLogged ? adminLinks : clientLinks;
@@ -79,7 +79,7 @@ export default function Navbar() {
                 <li>
                   <button
                     onClick={() => supabase.auth.signOut()}
-                    className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-red-500/80 hover:bg-red-600 text-white font-bold shadow-lg transition-all duration-300 hover:scale-105 border border-red-400/30"
+                    className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-red-500/80 hover:bg-red-600 text-white font-bold shadow-lg transition-all duration-300 hover:scale-105 border border-red-400/30 cursor-pointer"
                   >
                     <IoLogOut className="text-xl" />
                     Salir

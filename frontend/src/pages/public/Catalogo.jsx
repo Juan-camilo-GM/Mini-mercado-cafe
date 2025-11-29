@@ -154,11 +154,11 @@ export default function Catalogo() {
         <span className="text-transparent bg-clip-text 
                         bg-gradient-to-r from-purple-500 via-indigo-600 to-purple-700
                         drop-shadow-[0_0_25px_rgba(139,92,246,0.45)]">
-          Todo
+          Fresco
         </span>
 
         {/* Palabra secundaria en color sólido oscuro para máximo contraste */}
-        <span className="text-gray-900">Fresco</span>
+        <span className="text-gray-900">Vecino</span>
 
         {/* Subtítulo – elige el que más te represente */}
         <br />
@@ -171,7 +171,7 @@ export default function Catalogo() {
         {/* Buscador */}
         <div className="relative flex-1 max-w-2xl">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-gray-400 cursor-pointer" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
@@ -257,96 +257,102 @@ export default function Catalogo() {
 
             return (
               <article
-  key={p.id}
-  className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-400 flex flex-col h-full
-    ${estaAgotado 
-      ? "opacity-65 grayscale" 
-      : "shadow-xl hover:shadow-2xl hover:-translate-y-2 ring-1 ring-gray-100"
-    }`}
->
-  {/* Imagen */}
-  <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 sm:aspect-square">
-    <img
-      src={p.imagen_url || "/placeholder.jpg"}
-      alt={p.nombre}
-      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-      loading="lazy"
-    />
+                key={p.id}
+                className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-400 flex flex-col h-full
+                  ${estaAgotado 
+                    ? "opacity-65 grayscale" 
+                    : "shadow-xl hover:shadow-2xl hover:-translate-y-2 ring-1 ring-gray-100"
+                  }`}
+              >
+                {/* Imagen */}
+                <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 sm:aspect-square">
+                  <img
+                    src={p.imagen_url || "/placeholder.jpg"}
+                    alt={p.nombre}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    loading="lazy"
+                  />
 
-    {/* Badge categoría */}
-    <span className={`absolute top-3 left-3 px-3.5 py-1.5 rounded-full text-white text-xs font-bold shadow-lg z-10
-      ${p.categoria_id === 1 ? "bg-orange-500" :
-        p.categoria_id === 2 ? "bg-emerald-600" :
-        p.categoria_id === 3 ? "bg-sky-600" :
-        p.categoria_id === 4 ? "bg-pink-600" : "bg-purple-600"}`}>
-      {catMap[p.categoria_id] || "General"}
-    </span>
+                  {/* Badge categoría */}
+                  <span className={`absolute top-3 left-3 px-3.5 py-1.5 rounded-full text-white text-xs font-bold shadow-lg z-10
+                    ${p.categoria_id === 1 ? "bg-orange-500" :
+                      p.categoria_id === 2 ? "bg-emerald-600" :
+                      p.categoria_id === 3 ? "bg-sky-600" :
+                      p.categoria_id === 4 ? "bg-pink-600" : "bg-purple-600"}`}>
+                    {catMap[p.categoria_id] || "General"}
+                  </span>
 
-    {pocoStock && (
-      <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse">
-        ¡Últimas {p.stock}!
-      </span>
-    )}
+                  {/* Badge poco stock – SOLUCIÓN APLICADA AQUÍ */}
+                  {pocoStock && (
+                    <span className="absolute 
+                      top-12 left-3            /* ← MÓVIL: debajo del badge de categoría */
+                      sm:top-3 sm:left-auto sm:right-3   /* ← DESDE sm: posición original a la derecha */
+                      bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse z-10
+                    ">
+                      ¡Solo Quedan {p.stock}!
+                    </span>
+                  )}
 
-    {estaAgotado && (
-      <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
-        <span className="bg-red-600 text-white font-black text-2xl px-8 py-3 rounded-2xl shadow-2xl">
-          AGOTADO
-        </span>
-      </div>
-    )}
-  </div>
+                  {/* Badge agotado */}
+                  {estaAgotado && (
+                    <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
+                      <span className="bg-red-600 text-white font-black text-2xl px-8 py-3 rounded-2xl shadow-2xl">
+                        AGOTADO
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-  {/* Texto y precio */}
-  <div className="p-4 pb-3 sm:p-5 sm:pb-3 flex flex-col flex-1">
-    <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight line-clamp-2">
-      {p.nombre}
-    </h3>
+                {/* Texto y precio */}
+                <div className="p-4 pb-3 sm:p-5 sm:pb-3 flex flex-col flex-1">
+                  <h3 className="font-bold text-gray-900 text-base sm:text-lg leading-tight line-clamp-2">
+                    {p.nombre}
+                  </h3>
 
-    <div className="mt-2 sm:mt-3">
-      <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-700">
-        ${parseFloat(p.precio).toLocaleString("es-AR")}
-      </span>
-    </div>
-  </div>
+                  <div className="mt-2 sm:mt-3">
+                    <span className="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-700">
+                      ${parseFloat(p.precio).toLocaleString("es-AR")}
+                    </span>
+                  </div>
+                </div>
 
-  {/* BOTÓN – Compacto en móvil, grande en escritorio */}
-  {!estaAgotado ? (
-    <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-      <button
-        onClick={() => agregarAlCarrito(p)}
-        className="
-          w-full flex items-center justify-center gap-2 sm:gap-3
-          bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl sm:rounded-2xl
-          shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl active:scale-98 transition-all duration-300
-          
-          /* MÓVIL: estilo compacto y elegante como tu admin */
-          py-3 text-sm
-          [&>svg]:w-5 [&>svg]:h-5
-          
-          /* Desde sm (640px): vuelve al diseño premium grande */
-          sm:py-4 sm:text-lg sm:[&>svg]:w-7 sm:[&>svg]:h-7
-        "
-      >
-        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 3h2l.4 2M7.5 13h9l3.5-8H5.9M7.5 13L5.9 5M7.5 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-        </svg>
-        <span className="hidden xxs:inline">Añadir al carrito</span>
-        <span className="xxs:hidden">Añadir</span>
-      </button>
-    </div>
-  ) : (
-    <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-      <button 
-        disabled 
-        className="w-full py-3 sm:py-4 text-sm sm:text-lg font-bold bg-gray-300 text-gray-600 rounded-xl sm:rounded-2xl cursor-not-allowed"
-      >
-        Sin stock
-      </button>
-    </div>
-  )}
-</article>
+                {/* BOTÓN – Compacto en móvil, grande en escritorio */}
+                {!estaAgotado ? (
+                  <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+                    <button
+                      onClick={() => agregarAlCarrito(p)}
+                      className="
+                        w-full flex items-center justify-center gap-2 sm:gap-3 cursor-pointer
+                        bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl sm:rounded-2xl
+                        shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl active:scale-98 transition-all duration-300
+                        
+                        /* MÓVIL: estilo compacto y elegante */
+                        py-3 text-sm
+                        [&>svg]:w-5 [&>svg]:h-5
+                        
+                        /* Desde sm (640px): diseño premium grande */
+                        sm:py-4 sm:text-lg sm:[&>svg]:w-7 sm:[&>svg]:h-7
+                      "
+                    >
+                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M3 3h2l.4 2M7.5 13h9l3.5-8H5.9M7.5 13L5.9 5M7.5 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                      </svg>
+                      <span className="hidden xxs:inline">Añadir al carrito</span>
+                      <span className="xxs:hidden">Añadir</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-4 pb-4 sm:px-5 sm:pb-5">
+                    <button 
+                      disabled 
+                      className="w-full py-3 sm:py-4 text-sm sm:text-lg font-bold bg-gray-300 text-gray-600 rounded-xl sm:rounded-2xl cursor-not-allowed"
+                    >
+                      Sin stock
+                    </button>
+                  </div>
+                )}
+              </article>
             );
           })
         )}

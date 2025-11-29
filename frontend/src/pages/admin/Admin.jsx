@@ -41,27 +41,42 @@ export default function Productos() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cargandoProductos, setCargandoProductos] = useState(true); // ← NUEVO
 
-  // Cargar productos y categorías al montar
+  // CARGAR PRODUCTOS Y CATEGORÍAS (OPTIMIZADO)
   useEffect(() => {
-    async function cargarTodo() {
-      const prods = await obtenerProductos();
-      const cats = await obtenerCategorias();
-      setProductos(prods || []);
-      setCategorias(cats || []);
-      setCatMap(Object.fromEntries((cats || []).map(c => [c.id, c.nombre])));
+    async function cargarDatos() {
+      setCargandoProductos(true);
+      try {
+        const [prodsRes, catsRes] = await Promise.all([
+          obtenerProductos(),
+          obtenerCategorias()
+        ]);
+
+        const prods = prodsRes || [];
+        const cats = catsRes || [];
+
+        setProductos(prods);
+        setCategorias(cats);
+        setCatMap(Object.fromEntries(cats.map(c => [c.id, c.nombre])));
+      } catch (error) {
+        console.error("Error cargando datos:", error);
+        alert("No se pudieron cargar los productos. Revisa tu conexión.");
+      } finally {
+        setCargandoProductos(false);
+      }
     }
-    cargarTodo();
+
+    cargarDatos();
   }, []);
 
-  // Abrir modal crear
+  // === FUNCIONES DEL MODAL (sin cambios) ===
   const abrirCrear = () => {
     setFormProducto({ id: null, nombre: "", precio: "", stock: "", categoria_id: "", imagen_url: null });
     setImagenFile(null);
     setIsOpen(true);
   };
 
-  // Abrir modal editar
   const abrirEditar = (p) => {
     setFormProducto({
       id: p.id,
@@ -75,7 +90,6 @@ export default function Productos() {
     setIsOpen(true);
   };
 
-  // Cerrar modal
   const cerrar = () => {
     setIsOpen(false);
     setFormProducto({ id: null, nombre: "", precio: "", stock: "", categoria_id: "", imagen_url: null });
@@ -83,13 +97,11 @@ export default function Productos() {
     setLoading(false);
   };
 
-  // Manejar cambios en inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormProducto(prev => ({ ...prev, [name]: value }));
   };
 
-  // Guardar producto (crear o actualizar)
   const guardar = async () => {
     try {
       setLoading(true);
@@ -133,7 +145,6 @@ export default function Productos() {
     }
   };
 
-  // Eliminar producto
   const borrar = async (id) => {
     if (!window.confirm("¿Seguro que querés eliminar este producto?")) return;
     try {
@@ -144,7 +155,7 @@ export default function Productos() {
     }
   };
 
-  // Filtrar productos
+  // FILTROS
   const productosFiltrados = useMemo(() => {
     return productos.filter(p => {
       const texto = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
@@ -153,6 +164,7 @@ export default function Productos() {
     });
   }, [productos, busqueda, filtroCategoria]);
 
+  // === RENDER ===
   return (
     <>
       {/* ==================== PÁGINA PRINCIPAL ==================== */}
@@ -207,7 +219,7 @@ export default function Productos() {
             </button>
           )}
 
-          <button onClick={abrirCrear} className="px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 transition-all active:scale-95">
+          <button onClick={abrirCrear} className="px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl flex items-center justify-center gap-2.5 transition-all active:scale-95 cursor-pointer">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
             </svg>
@@ -215,69 +227,80 @@ export default function Productos() {
           </button>
         </div>
 
-        {/* Contador */}
-        {productosFiltrados.length !== productos.length && (
-          <div className="mb-6 text-sm text-gray-600">
-            Mostrando <span className="font-bold text-indigo-600">{productosFiltrados.length}</span> de <span className="font-bold">{productos.length}</span> productos
+        {/* ESTADO DE CARGA O GRID */}
+        {cargandoProductos ? (
+          <div className="flex flex-col items-center justify-center py-32">
+            <div className="w-20 h-20 border-6 border-indigo-600 border-t-transparent rounded-full animate-spin mb-6"></div>
+            <p className="text-2xl font-bold text-gray-700">Cargando productos...</p>
+            <p className="text-sm text-gray-500 mt-2">Esto solo toma un segundo</p>
           </div>
-        )}
-
-        {/* Grid de productos */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
-          {productosFiltrados.map((p) => {
-            const sinStock = p.stock === 0;
-            const pocoStock = p.stock > 0 && p.stock <= 5;
-
-            return (
-              <div key={p.id} className={`group relative bg-white rounded-xl shadow-sm hover:shadow-lg border border-gray-200 transition-all duration-250 hover:border-indigo-300 hover:-translate-y-1 ${sinStock ? "opacity-70" : ""}`}>
-                <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-t-xl">
-                  {p.imagen_url ? (
-                    <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center bg-gray-100 text-gray-400 text-xs font-medium">Sin imagen</div>
-                  )}
-                  {pocoStock && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">¡Solo quedan {p.stock}!</div>}
-                  {sinStock && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-white font-bold text-sm">AGOTADO</span></div>}
-                </div>
-
-                <div className="p-3 space-y-2">
-                  <p className="text-xs text-indigo-600 font-medium truncate">{p.categorias?.nombre || "Sin categoría"}</p>
-                  <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-snug">{p.nombre}</h3>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-bold text-gray-900">${parseFloat(p.precio).toLocaleString("es-AR")}</span>
-                    <span className={`font-medium ${pocoStock ? "text-red-600" : "text-gray-600"}`}>Stock: {p.stock}</span>
-                  </div>
-                  <div className="flex gap-1.5 pt-2 border-t border-gray-100">
-                    <button onClick={() => abrirEditar(p)} className="flex-1 bg-indigo-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-indigo-700 active:scale-95 transition">Editar</button>
-                    <button onClick={() => borrar(p.id)} className="flex-1 bg-red-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-red-700 active:scale-95 transition">Eliminar</button>
-                  </div>
-                </div>
+        ) : productosFiltrados.length === 0 ? (
+          <div className="text-center py-32">
+            <p className="text-3xl text-gray-500 font-medium">No se encontraron productos</p>
+            <p className="text-gray-400 mt-4">Intenta con otro término o categoría</p>
+          </div>
+        ) : (
+          <>
+            {/* Contador */}
+            {productosFiltrados.length !== productos.length && (
+              <div className="mb-6 text-sm text-gray-600">
+                Mostrando <span className="font-bold text-indigo-600">{productosFiltrados.length}</span> de <span className="font-bold">{productos.length}</span> productos
               </div>
-            );
-          })}
-        </div>
+            )}
+
+            {/* Grid de productos */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4">
+              {productosFiltrados.map((p) => {
+                const sinStock = p.stock === 0;
+                const pocoStock = p.stock > 0 && p.stock <= 5;
+
+                return (
+                  <div key={p.id} className={`group relative bg-white rounded-xl shadow-sm hover:shadow-lg border border-gray-200 transition-all duration-250 hover:border-indigo-300 hover:-translate-y-1 ${sinStock ? "opacity-70" : ""}`}>
+                    <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-t-xl">
+                      {p.imagen_url ? (
+                        <img src={p.imagen_url} alt={p.nombre} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy" />
+                      ) : (
+                        <div className="flex h-full items-center justify-center bg-gray-100 text-gray-400 text-xs font-medium">Sin imagen</div>
+                      )}
+                      {pocoStock && <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">¡Solo quedan {p.stock}!</div>}
+                      {sinStock && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-white font-bold text-sm">AGOTADO</span></div>}
+                    </div>
+
+                    <div className="p-3 space-y-2">
+                      <p className="text-xs text-indigo-600 font-medium truncate">{p.categorias?.nombre || "Sin categoría"}</p>
+                      <h3 className="font-semibold text-gray-900 text-sm line-clamp-2 leading-snug">{p.nombre}</h3>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-bold text-gray-900">${parseFloat(p.precio).toLocaleString("es-CO")}</span>
+                        <span className={`font-medium ${pocoStock ? "text-red-600" : "text-gray-600"}`}>Stock: {p.stock}</span>
+                      </div>
+                      <div className="flex gap-1.5 pt-2 border-t border-gray-100">
+                        <button onClick={() => abrirEditar(p)} className="flex-1 bg-indigo-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-indigo-700 active:scale-95 transition cursor-pointer">Editar</button>
+                        <button onClick={() => borrar(p.id)} className="flex-1 bg-red-600 text-white text-xs font-medium py-2 rounded-lg hover:bg-red-700 active:scale-95 transition cursor-pointer">Eliminar</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
 
-      {/* ==================== MODAL CREAR / EDITAR PRODUCTO ==================== */}
+      {/* ==================== MODAL (sin cambios) ==================== */}
       {isOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[80] p-4">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
-
-            {/* Header */}
             <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-6 text-center relative">
               <h2 className="text-2xl font-bold">
                 {formProducto.id ? "Editar Producto" : "Nuevo Producto"}
               </h2>
-              <button onClick={cerrar} disabled={loading} className="absolute top-5 right-5 bg-white/20 hover:bg-white/30 rounded-full p-2 transition">
+              <button onClick={cerrar} disabled={loading} className="absolute top-5 right-5 bg-white/20 hover:bg-white/30 rounded-full p-2 transition cursor-pointer">
                 <IoClose className="text-2xl" />
               </button>
             </div>
 
-            {/* Formulario */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                {/* Campos */}
                 <div className="space-y-5">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Nombre</label>
@@ -309,7 +332,6 @@ export default function Productos() {
                   </div>
                 </div>
 
-                {/* Imagen */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-3">Imagen del producto</label>
 
@@ -327,7 +349,7 @@ export default function Productos() {
                           setImagenFile(null);
                           setFormProducto(prev => ({ ...prev, imagen_url: null }));
                         }}
-                        className="absolute -top-3 -right-3 bg-white rounded-full shadow-2xl p-2 hover:scale-110 transition"
+                        className="absolute -top-3 -right-3 bg-white rounded-full shadow-2xl p-2 hover:scale-110 transition cursor-pointer"
                       >
                         <IoCloseCircle className="text-3xl text-red-500" />
                       </button>
@@ -357,13 +379,12 @@ export default function Productos() {
               </div>
             </div>
 
-            {/* Botones */}
             <div className="border-t bg-gray-50 px-6 py-5">
               <div className="flex justify-end gap-4">
-                <button onClick={cerrar} disabled={loading} className="px-6 py-3.5 rounded-xl border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition">
+                <button onClick={cerrar} disabled={loading} className="px-6 py-3.5 rounded-xl border-2 border-gray-300 text-gray-700 font-medium hover:bg-gray-100 transition cursor-pointer">
                   Cancelar
                 </button>
-                <button onClick={guardar} disabled={loading} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl active:scale-98 transition flex items-center gap-3">
+                <button onClick={guardar} disabled={loading} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl active:scale-98 transition flex items-center gap-3 cursor-pointer">
                   {loading ? "Guardando..." : "Guardar producto"}
                 </button>
               </div>

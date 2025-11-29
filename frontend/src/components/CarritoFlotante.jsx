@@ -191,11 +191,25 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
       {/* BOTÓN FLOTANTE */}
       <button
         onClick={toggleModal}
-        className="fixed bottom-6 right-6 z-50 bg-gradient-to-br from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white p-5 rounded-full shadow-2xl flex items-center justify-center border-4 border-white/30 transition-all hover:scale-110 active:scale-95"
+        className="
+          fixed bottom-6 right-6 sm:bottom-8 sm:right-8 z-50
+          bg-gradient-to-br from-indigo-600 to-purple-700 
+          hover:from-indigo-700 hover:to-purple-800 
+          text-white rounded-full shadow-2xl
+          flex items-center justify-center
+          w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24
+          border-4 border-white/30
+          transition-all hover:scale-110 active:scale-95 cursor-pointer
+        "
       >
-        <IoCart className="text-3xl" />
+        <IoCart className="text-3xl sm:text-5xl lg:text-6xl" />
+        
         {cantidadTotal > 0 && (
-          <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full min-w-6 h-6 flex items-center justify-center border-2 border-white">
+          <span className="
+            absolute -top-3 -right-3 bg-red-500 text-white font-bold rounded-full
+            border-4 border-white shadow-lg
+            w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center text-sm sm:text-lg
+          ">
             {cantidadTotal > 99 ? "99+" : cantidadTotal}
           </span>
         )}
@@ -208,7 +222,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
             <div className="bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-5 relative">
               <h2 className="text-2xl font-bold text-center">Tu Carrito</h2>
               <button onClick={toggleModal} className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 rounded-full p-2">
-                <IoClose className="text-2xl" />
+                <IoClose className="text-2xl cursor-pointer" />
               </button>
             </div>
 
@@ -228,15 +242,15 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                         <h4 className="font-bold">{p.nombre}</h4>
                         <p className="text-sm text-gray-600">${p.precio.toLocaleString("es-CO")} c/u</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <button onClick={() => actualizarCantidad(p.id, p.cantidad - 1)} className="w-8 h-8 rounded bg-white border">−</button>
+                          <button onClick={() => actualizarCantidad(p.id, p.cantidad - 1)} className="w-8 h-8 rounded bg-white border cursor-pointer">−</button>
                           <span className="w-12 text-center font-bold">{p.cantidad}</span>
-                          <button onClick={() => actualizarCantidad(p.id, p.cantidad + 1)} className="w-8 h-8 rounded bg-white border">+</button>
+                          <button onClick={() => actualizarCantidad(p.id, p.cantidad + 1)} className="w-8 h-8 rounded bg-white border cursor-pointer">+</button>
                         </div>
                         {alertaStock?.id === p.id && <p className="text-red-600 text-xs mt-1">{alertaStock.mensaje}</p>}
                       </div>
                       <div className="text-right">
                         <p className="font-bold">${(p.precio * p.cantidad).toLocaleString("es-CO")}</p>
-                        <button onClick={() => eliminarProducto(p.id)} className="text-red-500 mt-2">
+                        <button onClick={() => eliminarProducto(p.id)} className="text-red-500 mt-2 cursor-pointer">
                           <IoTrashBin />
                         </button>
                       </div>
@@ -253,10 +267,10 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                   <span className="text-indigo-600">${total.toLocaleString("es-CO")}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={vaciarCarrito} className="py-3 rounded-xl bg-gray-200 hover:bg-gray-300 font-medium">
+                  <button onClick={vaciarCarrito} className="py-3 rounded-xl bg-gray-200 hover:bg-gray-300 font-medium cursor-pointer">
                     Vaciar
                   </button>
-                  <button onClick={abrirCheckout} className="py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold">
+                  <button onClick={abrirCheckout} className="py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold cursor-pointer">
                     Confirmar pedido
                   </button>
                 </div>
@@ -278,7 +292,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                 onClick={cerrarCheckout} 
                 className="absolute top-4 right-4 bg-white/25 hover:bg-white/40 rounded-full p-2 transition"
               >
-                <IoClose className="text-2xl" />
+                <IoClose className="text-2xl cursor-pointer" />
               </button>
             </div>
 
@@ -459,14 +473,14 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                 <button
                   type="button"
                   onClick={cerrarCheckout}
-                  className="py-4 rounded-xl border-2 border-gray-400 text-gray-700 font-bold hover:bg-gray-100 transition"
+                  className="py-4 rounded-xl border-2 border-gray-400 text-gray-700 font-bold hover:bg-gray-100 transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={confirmarPedido}
-                  className="py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold shadow-xl hover:shadow-2xl active:scale-98 transition flex items-center justify-center gap-3"
+                  className="py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 text-white font-bold shadow-xl hover:shadow-2xl active:scale-98 transition flex items-center justify-center gap-3 cursor-pointer"
                 >
                   Enviar por WhatsApp
                 </button>

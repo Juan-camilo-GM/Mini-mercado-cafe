@@ -68,7 +68,7 @@ export default function RequireAuth({ children }) {
     };
   }, []);
 
-  // ************ CONDICIÓN DE CARGA MEJORADA ************
+  // ************ CONDICIÓN DE CARGA ************
   if (checking) {
     return <SessionLoader message="Verificando permisos de administrador..." />;
   }
