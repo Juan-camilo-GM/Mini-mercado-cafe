@@ -161,10 +161,104 @@ export default function DashboardPedidos() {
   }, []);
 
   // Acciones
-  const actualizarEstado = async (id, nuevoEstado) => {
-    await supabase.from("pedidos").update({ estado: nuevoEstado }).eq("id", id);
+  // Función mejorada para actualizar estado con descuento de stock
+const actualizarEstado = async (id, nuevoEstado) => {
+  try {
+    // 1. Obtener el pedido completo
+    const { data: pedido, error: errorPedido } = await supabase
+      .from("pedidos")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (errorPedido) {
+      console.error("Error obteniendo pedido:", errorPedido);
+      alert("Error al obtener los datos del pedido");
+      return;
+    }
+
+    // 2. Si se está confirmando el pedido y antes NO estaba confirmado
+    if (nuevoEstado === "confirmado" && pedido.estado !== "confirmado") {
+      // Descontar stock de cada producto
+      const productosConError = [];
+      
+      for (const prod of pedido.productos || []) {
+        // Obtener producto actual de la base de datos
+        const { data: productoActual, error: errorGet } = await supabase
+          .from("productos")
+          .select("stock")
+          .eq("id", prod.id)
+          .single();
+
+        if (errorGet) {
+          productosConError.push(prod.nombre);
+          continue;
+        }
+
+        // Calcular nuevo stock
+        const nuevoStock = productoActual.stock - prod.cantidad;
+
+        // Validar que no quede negativo
+        if (nuevoStock < 0) {
+          alert(`⚠️ Stock insuficiente para "${prod.nombre}". Stock actual: ${productoActual.stock}, solicitado: ${prod.cantidad}`);
+          return; // Cancelar la operación
+        }
+
+        // Actualizar stock
+        const { error: errorUpdate } = await supabase
+          .from("productos")
+          .update({ stock: nuevoStock })
+          .eq("id", prod.id);
+
+        if (errorUpdate) {
+          productosConError.push(prod.nombre);
+        }
+      }
+
+      if (productosConError.length > 0) {
+        alert(`⚠️ Error actualizando stock de: ${productosConError.join(", ")}`);
+      }
+    }
+
+    // 3. Si se está CANCELANDO un pedido que estaba confirmado, DEVOLVER el stock
+    if (nuevoEstado === "cancelado" && pedido.estado === "confirmado") {
+      for (const prod of pedido.productos || []) {
+        const { data: productoActual } = await supabase
+          .from("productos")
+          .select("stock")
+          .eq("id", prod.id)
+          .single();
+
+        if (productoActual) {
+          await supabase
+            .from("productos")
+            .update({ stock: productoActual.stock + prod.cantidad })
+            .eq("id", prod.id);
+        }
+      }
+    }
+
+    // 4. Actualizar el estado del pedido
+    const { error } = await supabase
+      .from("pedidos")
+      .update({ estado: nuevoEstado })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error actualizando estado:", error);
+      alert("Error al actualizar el estado del pedido");
+      return;
+    }
+
+    // 5. Recargar pedidos
+    alert(`✅ Pedido ${nuevoEstado === "confirmado" ? "confirmado y stock actualizado" : "actualizado"} correctamente`);
     fetchPedidos();
-  };
+
+  } catch (error) {
+    console.error("Error general:", error);
+    alert("Error inesperado al procesar el pedido");
+  }
+};
 
   const eliminarPedido = async (id) => {
     if (!window.confirm("¿Eliminar este pedido permanentemente?")) return;
