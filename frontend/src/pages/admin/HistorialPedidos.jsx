@@ -12,6 +12,8 @@ import {
   IoCartOutline,
   IoTimeOutline,
   IoDownloadOutline,
+  IoWarningOutline,
+  IoStorefrontOutline,
 } from "react-icons/io5";
 import { format, subDays } from "date-fns";
 import { es } from "date-fns/locale";
@@ -24,14 +26,14 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import ProveedoresDashboard from "../../components/proveedores/ProveedoresDashboard"; // ← NUEVA IMPORTACIÓN
 
-// ← NUEVO COMPONENTE: Fila expandible con detalle de productos
+// Componentes existentes (mantenemos todo igual)
 const PedidoRow = ({ pedido, onEstadoChange, onEliminar }) => {
   const [expandido, setExpandido] = useState(false);
 
   return (
     <>
-      {/* Fila principal - clickable */}
       <tr
         className="hover:bg-gray-50 cursor-pointer transition-all"
         onClick={() => setExpandido(!expandido)}
@@ -93,7 +95,6 @@ const PedidoRow = ({ pedido, onEstadoChange, onEliminar }) => {
         </td>
       </tr>
 
-      {/* Fila expandida con productos */}
       {expandido && (
         <tr>
           <td colSpan="4" className="px-5 py-6 bg-gray-50 border-t">
@@ -132,9 +133,43 @@ const PedidoRow = ({ pedido, onEstadoChange, onEliminar }) => {
   );
 };
 
-export default function DashboardPedidos() {
+const ProductoStockBajo = ({ producto }) => {
+  const getNivelStock = (stock) => {
+    if (stock === 0) return { texto: "AGOTADO", color: "bg-red-100 text-red-800" };
+    if (stock <= 5) return { texto: "MUY BAJO", color: "bg-orange-100 text-orange-800" };
+    return { texto: "BAJO", color: "bg-yellow-100 text-yellow-800" };
+  };
+
+  const nivel = getNivelStock(producto.stock);
+
+  return (
+    <div className="bg-white border rounded-xl p-4 shadow-sm hover:shadow-md transition">
+      <div className="flex justify-between items-start mb-3">
+        <h4 className="font-semibold text-gray-900 truncate">{producto.nombre}</h4>
+        <span className={`px-2 py-1 rounded-full text-xs font-bold ${nivel.color}`}>
+          {nivel.texto}
+        </span>
+      </div>
+      <div className="flex justify-between items-center">
+        <span className="text-sm text-gray-600">Stock actual:</span>
+        <span className={`text-lg font-bold ${
+          producto.stock === 0 ? "text-red-600" : 
+          producto.stock <= 5 ? "text-orange-600" : "text-yellow-600"
+        }`}>
+          {producto.stock} unidades
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// Componente principal - AHORA CON 2 TABS
+export default function HistorialPedidos() {
+  const [tabActivo, setTabActivo] = useState("ventas"); // ← NUEVO ESTADO PARA TABS
   const [pedidos, setPedidos] = useState([]);
+  const [productosStockBajo, setProductosStockBajo] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingStock, setLoadingStock] = useState(true);
   const [filtro, setFiltro] = useState("");
   const [estadoFiltro, setEstadoFiltro] = useState("");
   const [fechaInicio, setFechaInicio] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
@@ -142,7 +177,14 @@ export default function DashboardPedidos() {
   const [pagina, setPagina] = useState(1);
   const itemsPorPagina = 12;
 
-  // Cargar pedidos
+  // Cargar datos para la pestaña de ventas
+  useEffect(() => {
+    if (tabActivo === "ventas") {
+      fetchPedidos();
+      fetchProductosStockBajo();
+    }
+  }, [tabActivo]);
+
   const fetchPedidos = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -156,109 +198,110 @@ export default function DashboardPedidos() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchPedidos();
-  }, []);
-
-  // Acciones
-  // Función mejorada para actualizar estado con descuento de stock
-const actualizarEstado = async (id, nuevoEstado) => {
-  try {
-    // 1. Obtener el pedido completo
-    const { data: pedido, error: errorPedido } = await supabase
-      .from("pedidos")
+  const fetchProductosStockBajo = async () => {
+    setLoadingStock(true);
+    const { data, error } = await supabase
+      .from("productos")
       .select("*")
-      .eq("id", id)
-      .single();
-
-    if (errorPedido) {
-      console.error("Error obteniendo pedido:", errorPedido);
-      alert("Error al obtener los datos del pedido");
-      return;
-    }
-
-    // 2. Si se está confirmando el pedido y antes NO estaba confirmado
-    if (nuevoEstado === "confirmado" && pedido.estado !== "confirmado") {
-      // Descontar stock de cada producto
-      const productosConError = [];
-      
-      for (const prod of pedido.productos || []) {
-        // Obtener producto actual de la base de datos
-        const { data: productoActual, error: errorGet } = await supabase
-          .from("productos")
-          .select("stock")
-          .eq("id", prod.id)
-          .single();
-
-        if (errorGet) {
-          productosConError.push(prod.nombre);
-          continue;
-        }
-
-        // Calcular nuevo stock
-        const nuevoStock = productoActual.stock - prod.cantidad;
-
-        // Validar que no quede negativo
-        if (nuevoStock < 0) {
-          alert(`⚠️ Stock insuficiente para "${prod.nombre}". Stock actual: ${productoActual.stock}, solicitado: ${prod.cantidad}`);
-          return; // Cancelar la operación
-        }
-
-        // Actualizar stock
-        const { error: errorUpdate } = await supabase
-          .from("productos")
-          .update({ stock: nuevoStock })
-          .eq("id", prod.id);
-
-        if (errorUpdate) {
-          productosConError.push(prod.nombre);
-        }
-      }
-
-      if (productosConError.length > 0) {
-        alert(`⚠️ Error actualizando stock de: ${productosConError.join(", ")}`);
-      }
-    }
-
-    // 3. Si se está CANCELANDO un pedido que estaba confirmado, DEVOLVER el stock
-    if (nuevoEstado === "cancelado" && pedido.estado === "confirmado") {
-      for (const prod of pedido.productos || []) {
-        const { data: productoActual } = await supabase
-          .from("productos")
-          .select("stock")
-          .eq("id", prod.id)
-          .single();
-
-        if (productoActual) {
-          await supabase
-            .from("productos")
-            .update({ stock: productoActual.stock + prod.cantidad })
-            .eq("id", prod.id);
-        }
-      }
-    }
-
-    // 4. Actualizar el estado del pedido
-    const { error } = await supabase
-      .from("pedidos")
-      .update({ estado: nuevoEstado })
-      .eq("id", id);
+      .lte("stock", 10)
+      .order("stock", { ascending: true });
 
     if (error) {
-      console.error("Error actualizando estado:", error);
-      alert("Error al actualizar el estado del pedido");
-      return;
+      console.error("Error cargando productos con stock bajo:", error);
+    } else {
+      setProductosStockBajo(data || []);
     }
+    setLoadingStock(false);
+  };
 
-    // 5. Recargar pedidos
-    alert(`✅ Pedido ${nuevoEstado === "confirmado" ? "confirmado y stock actualizado" : "actualizado"} correctamente`);
-    fetchPedidos();
+  const actualizarEstado = async (id, nuevoEstado) => {
+    try {
+      const { data: pedido, error: errorPedido } = await supabase
+        .from("pedidos")
+        .select("*")
+        .eq("id", id)
+        .single();
 
-  } catch (error) {
-    console.error("Error general:", error);
-    alert("Error inesperado al procesar el pedido");
-  }
-};
+      if (errorPedido) {
+        console.error("Error obteniendo pedido:", errorPedido);
+        alert("Error al obtener los datos del pedido");
+        return;
+      }
+
+      if (nuevoEstado === "confirmado" && pedido.estado !== "confirmado") {
+        const productosConError = [];
+        
+        for (const prod of pedido.productos || []) {
+          const { data: productoActual, error: errorGet } = await supabase
+            .from("productos")
+            .select("stock")
+            .eq("id", prod.id)
+            .single();
+
+          if (errorGet) {
+            productosConError.push(prod.nombre);
+            continue;
+          }
+
+          const nuevoStock = productoActual.stock - prod.cantidad;
+
+          if (nuevoStock < 0) {
+            alert(`⚠️ Stock insuficiente para "${prod.nombre}". Stock actual: ${productoActual.stock}, solicitado: ${prod.cantidad}`);
+            return;
+          }
+
+          const { error: errorUpdate } = await supabase
+            .from("productos")
+            .update({ stock: nuevoStock })
+            .eq("id", prod.id);
+
+          if (errorUpdate) {
+            productosConError.push(prod.nombre);
+          }
+        }
+
+        if (productosConError.length > 0) {
+          alert(`⚠️ Error actualizando stock de: ${productosConError.join(", ")}`);
+        }
+      }
+
+      if (nuevoEstado === "cancelado" && pedido.estado === "confirmado") {
+        for (const prod of pedido.productos || []) {
+          const { data: productoActual } = await supabase
+            .from("productos")
+            .select("stock")
+            .eq("id", prod.id)
+            .single();
+
+          if (productoActual) {
+            await supabase
+              .from("productos")
+              .update({ stock: productoActual.stock + prod.cantidad })
+              .eq("id", prod.id);
+          }
+        }
+      }
+
+      const { error } = await supabase
+        .from("pedidos")
+        .update({ estado: nuevoEstado })
+        .eq("id", id);
+
+      if (error) {
+        console.error("Error actualizando estado:", error);
+        alert("Error al actualizar el estado del pedido");
+        return;
+      }
+
+      alert(`✅ Pedido ${nuevoEstado === "confirmado" ? "confirmado y stock actualizado" : "actualizado"} correctamente`);
+      fetchPedidos();
+      fetchProductosStockBajo();
+
+    } catch (error) {
+      console.error("Error general:", error);
+      alert("Error inesperado al procesar el pedido");
+    }
+  };
 
   const eliminarPedido = async (id) => {
     if (!window.confirm("¿Eliminar este pedido permanentemente?")) return;
@@ -266,7 +309,7 @@ const actualizarEstado = async (id, nuevoEstado) => {
     fetchPedidos();
   };
 
-  // Filtrado
+  // Filtrado y cálculos para ventas
   const datosFiltrados = useMemo(() => {
     return pedidos.filter((p) => {
       const fecha = format(new Date(p.created_at), "yyyy-MM-dd");
@@ -277,7 +320,6 @@ const actualizarEstado = async (id, nuevoEstado) => {
     });
   }, [pedidos, filtro, estadoFiltro, fechaInicio, fechaFin]);
 
-  // Métricas clave
   const hoy = format(new Date(), "yyyy-MM-dd");
   const ventasHoy = datosFiltrados
     .filter((p) => format(new Date(p.created_at), "yyyy-MM-dd") === hoy && p.estado === "confirmado")
@@ -288,11 +330,11 @@ const actualizarEstado = async (id, nuevoEstado) => {
     .reduce((acc, p) => acc + parseInt(p.total || 0), 0);
 
   const pedidosPendientes = datosFiltrados.filter((p) => p.estado === "pendiente").length;
-
   const pedidosConfirmados = datosFiltrados.filter((p) => p.estado === "confirmado").length;
   const ticketPromedio = pedidosConfirmados > 0 ? Math.round(ventasPeriodo / pedidosConfirmados) : 0;
+  const productosStockCritico = productosStockBajo.filter(p => p.stock <= 5).length;
+  const productosAgotados = productosStockBajo.filter(p => p.stock === 0).length;
 
-  // Gráfico últimos 7 días
   const ultimos7Dias = Array.from({ length: 7 }, (_, i) => {
     const fecha = subDays(new Date(), 6 - i);
     const fechaStr = format(fecha, "yyyy-MM-dd");
@@ -307,7 +349,6 @@ const actualizarEstado = async (id, nuevoEstado) => {
     };
   });
 
-  // Top 5 productos
   const topProductos = useMemo(() => {
     const mapa = {};
     datosFiltrados.forEach((p) => {
@@ -318,11 +359,10 @@ const actualizarEstado = async (id, nuevoEstado) => {
     });
     return Object.entries(mapa)
       .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
+      .slice(0, 10)
       .map(([nombre, cantidad]) => ({ nombre, cantidad }));
   }, [datosFiltrados]);
 
-  // Exportar CSV sin dependencias externas
   const exportarCSV = () => {
     const encabezado = ["Fecha", "Cliente", "Estado", "Total", "Productos"];
     const filas = datosFiltrados.map((p) => [
@@ -349,11 +389,236 @@ const actualizarEstado = async (id, nuevoEstado) => {
     document.body.removeChild(link);
   };
 
-  // Paginación
   const totalPaginas = Math.ceil(datosFiltrados.length / itemsPorPagina);
   const pedidosPaginados = datosFiltrados.slice((pagina - 1) * itemsPorPagina, pagina * itemsPorPagina);
 
-  if (loading) {
+  // Renderizado condicional basado en la pestaña activa
+  const renderContenido = () => {
+    if (tabActivo === "ventas") {
+      return (
+        <div className="space-y-8">
+          {/* Tarjetas de métricas */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Ventas hoy</p>
+                  <p className="text-3xl font-black text-emerald-600 mt-1">
+                    ${ventasHoy.toLocaleString("es-CO")}
+                  </p>
+                </div>
+                <IoTrendingUp className="text-5xl text-emerald-200 opacity-70" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total período</p>
+                  <p className="text-3xl font-black text-indigo-600 mt-1">
+                    ${ventasPeriodo.toLocaleString("es-CO")}
+                  </p>
+                </div>
+                <IoCashOutline className="text-5xl text-indigo-200 opacity-70" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pedidos pendientes</p>
+                  <p className="text-3xl font-black text-amber-600 mt-1">{pedidosPendientes}</p>
+                </div>
+                <IoTimeOutline className="text-5xl text-amber-200 opacity-70" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Ticket promedio</p>
+                  <p className="text-3xl font-black text-purple-600 mt-1">
+                    ${ticketPromedio.toLocaleString("es-CO")}
+                  </p>
+                </div>
+                <IoCartOutline className="text-5xl text-purple-200 opacity-70" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Stock bajo</p>
+                  <p className="text-3xl font-black text-red-600 mt-1">{productosStockBajo.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {productosAgotados} agotados • {productosStockCritico} críticos
+                  </p>
+                </div>
+                <IoWarningOutline className="text-5xl text-red-200 opacity-70" />
+              </div>
+            </div>
+          </div>
+
+          {/* Filtros + Gráfico */}
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border space-y-5">
+              <h3 className="text-xl font-bold text-gray-800">Filtros</h3>
+              <input
+                type="text"
+                placeholder="Buscar cliente..."
+                value={filtro}
+                onChange={(e) => setFiltro(e.target.value)}
+                className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+              <select
+                value={estadoFiltro}
+                onChange={(e) => setEstadoFiltro(e.target.value)}
+                className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">Todos los estados</option>
+                <option value="pendiente">Pendiente</option>
+                <option value="confirmado">Confirmado</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="px-4 py-3 border rounded-xl" />
+                <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className="px-4 py-3 border rounded-xl" />
+              </div>
+            </div>
+
+            <div className="xl:col-span-2 bg-white rounded-2xl shadow-lg p-6 border">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Ventas últimos 7 días</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={ultimos7Dias}>
+                  <CartesianGrid strokeDasharray="4 4" />
+                  <XAxis dataKey="dia" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => `$${value.toLocaleString("es-CO")}`} />
+                  <Bar dataKey="ventas" fill="#6366f1" radius={8} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Top productos + Tabla */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="bg-white rounded-2xl shadow-lg p-6 border">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Top 10 productos</h3>
+              <div className="space-y-3">
+                {topProductos.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No hay ventas confirmadas</p>
+                ) : (
+                  topProductos.map((p, i) => (
+                    <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                      <span className="font-medium">{i + 1}. {p.nombre}</span>
+                      <span className="font-bold text-indigo-600">{p.cantidad} und</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg border overflow-hidden">
+              <div className="p-6 border-b bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-bold text-gray-800">Pedidos recientes ({datosFiltrados.length})</h3>
+                  <button
+                    onClick={exportarCSV}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition"
+                  >
+                    <IoDownloadOutline size={16} />
+                    Exportar CSV
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-5 py-3 text-left font-medium text-gray-700">Cliente / Fecha</th>
+                      <th className="px-5 py-3 text-left font-medium text-gray-700">Total</th>
+                      <th className="px-5 py-3 text-left font-medium text-gray-700">Estado</th>
+                      <th className="px-5 py-3 text-left font-medium text-gray-700">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {pedidosPaginados.map((p) => (
+                      <PedidoRow
+                        key={p.id}
+                        pedido={p}
+                        onEstadoChange={actualizarEstado}
+                        onEliminar={eliminarPedido}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Paginación */}
+              {totalPaginas > 1 && (
+                <div className="px-6 py-4 border-t flex justify-between items-center text-sm">
+                  <span className="text-gray-600">
+                    Mostrando {(pagina - 1) * itemsPorPagina + 1}–{Math.min(pagina * itemsPorPagina, datosFiltrados.length)} de {datosFiltrados.length}
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                      disabled={pagina === 1}
+                      className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                      disabled={pagina === totalPaginas}
+                      className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Productos con stock bajo */}
+          {productosStockBajo.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg p-6 border">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <IoWarningOutline className="text-red-500" />
+                  Productos con Stock Bajo ({productosStockBajo.length})
+                </h3>
+                <span className="text-sm text-gray-500">
+                  Límite: 10 unidades
+                </span>
+              </div>
+              
+              {loadingStock ? (
+                <div className="text-center py-8">
+                  <div className="w-8 h-8 border-2 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                  <p className="text-gray-500">Cargando productos...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {productosStockBajo.map((producto) => (
+                    <ProductoStockBajo 
+                      key={producto.id} 
+                      producto={producto} 
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    } else {
+      // Tab de proveedores
+      return <ProveedoresDashboard />;
+    }
+  };
+
+  if (loading && tabActivo === "ventas") {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="text-center">
@@ -368,181 +633,60 @@ const actualizarEstado = async (id, nuevoEstado) => {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto space-y-8">
 
-        {/* Header + Exportar */}
+        {/* Header principal */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold text-gray-900">Dashboard de Ventas</h1>
-            <p className="text-lg text-gray-600">Control total de pedidos y ganancias</p>
+            <h1 className="text-4xl font-extrabold text-gray-900">Dashboard Comercial</h1>
+            <p className="text-lg text-gray-600">Gestión integral de ventas y proveedores</p>
           </div>
-          <button
-            onClick={exportarCSV}
-            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-lg"
-          >
-            <IoDownloadOutline size={20} />
-            Exportar CSV
-          </button>
-        </div>
-
-        {/* Tarjetas de métricas */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ventas hoy</p>
-                <p className="text-3xl font-black text-emerald-600 mt-1">
-                  ${ventasHoy.toLocaleString("es-CO")}
-                </p>
-              </div>
-              <IoTrendingUp className="text-5xl text-emerald-200 opacity-70" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total período</p>
-                <p className="text-3xl font-black text-indigo-600 mt-1">
-                  ${ventasPeriodo.toLocaleString("es-CO")}
-                </p>
-              </div>
-              <IoCashOutline className="text-5xl text-indigo-200 opacity-70" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pedidos pendientes</p>
-                <p className="text-3xl font-black text-amber-600 mt-1">{pedidosPendientes}</p>
-              </div>
-              <IoTimeOutline className="text-5xl text-amber-200 opacity-70" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-lg p-6 border hover:shadow-xl transition">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ticket promedio</p>
-                <p className="text-3xl font-black text-purple-600 mt-1">
-                  ${ticketPromedio.toLocaleString("es-CO")}
-                </p>
-              </div>
-              <IoCartOutline className="text-5xl text-purple-200 opacity-70" />
-            </div>
-          </div>
-        </div>
-
-        {/* Filtros + Gráfico */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border space-y-5">
-            <h3 className="text-xl font-bold text-gray-800">Filtros</h3>
-            <input
-              type="text"
-              placeholder="Buscar cliente..."
-              value={filtro}
-              onChange={(e) => setFiltro(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-            />
-            <select
-              value={estadoFiltro}
-              onChange={(e) => setEstadoFiltro(e.target.value)}
-              className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+          
+          {tabActivo === "ventas" && (
+            <button
+              onClick={exportarCSV}
+              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition shadow-lg"
             >
-              <option value="">Todos los estados</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="confirmado">Confirmado</option>
-              <option value="cancelado">Cancelado</option>
-            </select>
-            <div className="grid grid-cols-2 gap-3">
-              <input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} className="px-4 py-3 border rounded-xl" />
-              <input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} className="px-4 py-3 border rounded-xl" />
-            </div>
-          </div>
-
-          <div className="xl:col-span-2 bg-white rounded-2xl shadow-lg p-6 border">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Ventas últimos 7 días</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ultimos7Dias}>
-                <CartesianGrid strokeDasharray="4 4" />
-                <XAxis dataKey="dia" />
-                <YAxis />
-                <Tooltip formatter={(value) => `$${value.toLocaleString("es-CO")}`} />
-                <Bar dataKey="ventas" fill="#6366f1" radius={8} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+              <IoDownloadOutline size={20} />
+              Exportar CSV
+            </button>
+          )}
         </div>
+        
 
-        {/* Top productos + Tabla */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="bg-white rounded-2xl shadow-lg p-6 border">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Top 5 productos</h3>
-            <div className="space-y-3">
-              {topProductos.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">No hay ventas confirmadas</p>
-              ) : (
-                topProductos.map((p, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
-                    <span className="font-medium">{i + 1}. {p.nombre}</span>
-                    <span className="font-bold text-indigo-600">{p.cantidad} und</span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* TABLA MEJORADA CON DETALLE EXPANDIBLE */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg border overflow-hidden">
-            <div className="p-6 border-b bg-gray-50">
-              <h3 className="text-xl font-bold text-gray-800">Pedidos recientes ({datosFiltrados.length})</h3>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-5 py-3 text-left font-medium text-gray-700">Cliente / Fecha</th>
-                    <th className="px-5 py-3 text-left font-medium text-gray-700">Total</th>
-                    <th className="px-5 py-3 text-left font-medium text-gray-700">Estado</th>
-                    <th className="px-5 py-3 text-left font-medium text-gray-700">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {pedidosPaginados.map((p) => (
-                    <PedidoRow
-                      key={p.id}
-                      pedido={p}
-                      onEstadoChange={actualizarEstado}
-                      onEliminar={eliminarPedido}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Paginación */}
-            {totalPaginas > 1 && (
-              <div className="px-6 py-4 border-t flex justify-between items-center text-sm">
-                <span className="text-gray-600">
-                  Mostrando {(pagina - 1) * itemsPorPagina + 1}–{Math.min(pagina * itemsPorPagina, datosFiltrados.length)} de {datosFiltrados.length}
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
-                    disabled={pagina === 1}
-                    className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Anterior
-                  </button>
-                  <button
-                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
-                    disabled={pagina === totalPaginas}
-                    className="px-4 py-2 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Siguiente
-                  </button>
-                </div>
+        {/* Navegación por tabs */}
+        <div className="bg-white rounded-2xl shadow-lg border overflow-hidden">
+          <div className="flex border-b">
+            <button
+              onClick={() => setTabActivo("ventas")}
+              className={`flex-1 py-4 px-6 text-center font-medium transition ${
+                tabActivo === "ventas"
+                  ? "bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <IoCartOutline size={20} />
+                Ventas y Pedidos
               </div>
-            )}
+            </button>
+            
+            <button
+              onClick={() => setTabActivo("proveedores")}
+              className={`flex-1 py-4 px-6 text-center font-medium transition ${
+                tabActivo === "proveedores"
+                  ? "bg-indigo-50 text-indigo-700 border-b-2 border-indigo-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <IoStorefrontOutline size={20} />
+                Gestión de Proveedores
+              </div>
+            </button>
+          </div>
+          
+          
+          <div className="p-6">
+            {renderContenido()}
           </div>
         </div>
       </div>
