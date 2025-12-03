@@ -1,5 +1,59 @@
 @import "tailwindcss";
 
+/* Importar fuente moderna 'Outfit' */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Outfit', sans-serif;
+}
+
+body {
+  background-color: #f8fafc; /* Slate-50 */
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.05) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(34, 211, 238, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: #1e293b; /* Slate-800 */
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Utilidades Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.glass-dark {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .loading-icon {
   display: inline-block;
   animation: girar 0.9s linear infinite;
@@ -8,17 +62,4 @@
 @keyframes girar {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
-}
-
-body {
-  background: linear-gradient(135deg, 
-      #f8f4ff 0%,
-      #f0efff 30%, 
-      #e8f4ff 70%, 
-      #e0f2fe 100%
-  );
-  background-attachment: fixed;
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
 }

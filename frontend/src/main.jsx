@@ -2,9 +2,10 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Admin from "./pages/admin/Admin";
 import HistorialPedidos from "./pages/admin/HistorialPedidos";
+import RegistrarVenta from "./pages/admin/RegistrarVenta";
 import Catalogo from "./pages/public/Catalogo";
 import AdminLogin from "./pages/admin/AdminLogin";
-import  RequireAuth  from "./components/RequireAuth";
+import RequireAuth from "./components/RequireAuth";
 import LayoutAdmin from "./layouts/LayoutAdmin";
 import LayoutPublic from "./layouts/LayoutPublic";
 import { Toaster } from "react-hot-toast";
@@ -17,7 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <Toaster position="top-right" />
 
-    {/* ENVUELVE TODO CON AuthProvider */}
+
     <AuthProvider>
       <Routes>
         {/* Layout público */}
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         >
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/historial" element={<HistorialPedidos />} />
+          <Route path="/admin/venta" element={<RegistrarVenta />} />
         </Route>
       </Routes>
     </AuthProvider>

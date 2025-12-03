@@ -7,7 +7,16 @@ import BotonCerrarTienda from "../pages/admin/BotonCerrarTienda";
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const [isAdminLogged, setIsAdminLogged] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -19,7 +28,7 @@ export default function Navbar() {
     checkAdmin();
   }, [pathname]);
 
-  // VISTA PÚBLICA: Solo Inicio (eliminado Catálogo)
+  // VISTA PÚBLICA
   const clientLinks = [
     { to: "/", label: "Catálogo", icon: <IoGrid className="text-xl" /> },
   ];
@@ -27,61 +36,68 @@ export default function Navbar() {
   // VISTA ADMIN
   const adminLinks = [
     { to: "/admin", label: "Productos", icon: <IoGrid className="text-xl" /> },
+    { to: "/admin/venta", label: "Nueva Venta", icon: <IoCart className="text-xl" /> },
     { to: "/admin/historial", label: "Dashboard", icon: <IoTime className="text-xl" /> },
   ];
 
   const links = pathname.startsWith("/admin") && isAdminLogged ? adminLinks : clientLinks;
   const isAdminRoute = pathname.startsWith("/admin") && isAdminLogged;
 
-  // CLASE COMÚN: El gradiente ahora es fijo para todo el Navbar
-  const navBackground = "bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 shadow-2xl";
-
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b border-white/10 ${navBackground}`}>
+    <nav className="fixed top-0 left-0 right-0 z-50 py-4 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 shadow-2xl transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center justify-between">
 
-          {/* LOGO (Diseño Unificado) */}
+          {/* LOGO */}
           <Link to="/" className="flex items-center gap-3 group">
-            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-white/30 group-hover:scale-110 transition-all duration-300">
-              <span className="text-2xl font-black text-white"> <IoCart /></span>
+            <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center text-white shadow-lg border border-white/20 transition-transform group-hover:scale-105">
+              <IoCart className="text-2xl" />
             </div>
             <div>
-              <h1 className="font-black text-xl lg:text-2xl tracking-tight text-white">
-                Mini Market del Café
+              <h1 className="font-bold text-xl tracking-tight text-white">
+                Mini Market del <span className="text-indigo-200">Café</span>
               </h1>
-              {isAdminRoute && <p className="text-white/70 text-xs font-medium -mt-1">Admin Panel</p>}
+              {isAdminRoute && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white border border-white/30">
+                  ADMIN
+                </span>
+              )}
             </div>
           </Link>
 
           {/* MENÚ DE ESCRITORIO */}
-          <ul className="hidden lg:flex items-center gap-2">
-            {links.map((link) => (
-              <li key={link.to}>
-                <Link
-                  to={link.to}
-                  className={`flex items-center gap-2.5 px-5 py-3 rounded-xl font-semibold transition-all duration-300 border border-transparent
-                    ${pathname === link.to
-                      ? "bg-white/25 text-white shadow-lg border-white/20" // Activo
-                      : "text-white/80 hover:bg-white/15" // Inactivo
-                    }`}
-                >
-                  {link.icon}
-                  <span>{link.label}</span>
-                </Link>
-              </li>
-            ))}
+          <ul className="hidden lg:flex items-center gap-1">
+            {links.map((link) => {
+              const isActive = pathname === link.to;
+              return (
+                <li key={link.to}>
+                  <Link
+                    to={link.to}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                      ${isActive
+                        ? "bg-white/20 text-white shadow-lg border border-white/20"
+                        : "text-indigo-100 hover:text-white hover:bg-white/10"
+                      }`}
+                  >
+                    {link.icon}
+                    <span>{link.label}</span>
+                  </Link>
+                </li>
+              );
+            })}
 
             {/* Opciones extra solo para Admin */}
             {isAdminRoute && (
               <>
-                <li className="ml-2 pl-2 border-l border-white/20"><BotonCerrarTienda /></li>
+                <li className="ml-4 pl-4 border-l border-white/20 flex items-center gap-3">
+                  <BotonCerrarTienda />
+                </li>
                 <li>
                   <button
                     onClick={() => supabase.auth.signOut()}
-                    className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-red-500/80 hover:bg-red-600 text-white font-bold shadow-lg transition-all duration-300 hover:scale-105 border border-red-400/30 cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-500/20 text-rose-100 hover:bg-rose-500 hover:text-white font-medium transition-all duration-200 border border-rose-500/20"
                   >
-                    <IoLogOut className="text-xl" />
+                    <IoLogOut className="text-lg" />
                     Salir
                   </button>
                 </li>
@@ -92,7 +108,7 @@ export default function Navbar() {
           {/* BOTÓN MÓVIL */}
           <button
             onClick={() => setOpen(!open)}
-            className="lg:hidden p-3 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all"
+            className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
           >
             {open ? <IoClose className="text-2xl" /> : <IoMenu className="text-2xl" />}
           </button>
@@ -100,43 +116,49 @@ export default function Navbar() {
       </div>
 
       {/* MENÚ MÓVIL */}
-      {open && (
-        <div className="lg:hidden border-t border-white/20">
-          <ul className="px-4 py-4 space-y-2 bg-gradient-to-b from-purple-900/95 to-indigo-900/95 backdrop-blur-xl">
-            {links.map((link) => (
+      <div className={`lg:hidden absolute top-full left-0 right-0 bg-indigo-900/95 backdrop-blur-xl border-t border-white/10 transition-all duration-300 overflow-hidden ${open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+        }`}>
+        <ul className="px-4 py-6 space-y-2">
+          {links.map((link) => {
+            const isActive = pathname === link.to;
+            return (
               <li key={link.to}>
                 <Link
                   to={link.to}
                   onClick={() => setOpen(false)}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-xl font-bold text-lg transition-all duration-300 border border-transparent
-                    ${pathname === link.to
-                      ? "bg-white/25 text-white border-white/20"
-                      : "text-white/80 hover:bg-white/15"
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all
+                    ${isActive
+                      ? "bg-white/20 text-white"
+                      : "text-indigo-100 hover:bg-white/10 hover:text-white"
                     }`}
                 >
                   {link.icon}
                   {link.label}
                 </Link>
               </li>
-            ))}
+            );
+          })}
 
-            {isAdminRoute && (
-              <>
-                <li className="pt-2"><BotonCerrarTienda /></li>
-                <li>
-                  <button
-                    onClick={() => { supabase.auth.signOut(); setOpen(false); }}
-                    className="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-lg transition-all duration-300 mt-2"
-                  >
-                    <IoLogOut className="text-xl" />
-                    Salir
-                  </button>
-                </li>
-              </>
-            )}
-          </ul>
-        </div>
-      )}
+          {isAdminRoute && (
+            <>
+              <li className="pt-4 border-t border-white/10 mt-4">
+                <div className="px-2 mb-4">
+                  <BotonCerrarTienda />
+                </div>
+              </li>
+              <li>
+                <button
+                  onClick={() => { supabase.auth.signOut(); setOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-500/20 text-rose-200 hover:bg-rose-500 hover:text-white font-medium transition-all"
+                >
+                  <IoLogOut className="text-xl" />
+                  Cerrar Sesión
+                </button>
+              </li>
+            </>
+          )}
+        </ul>
+      </div>
     </nav>
   );
 }
