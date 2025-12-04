@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { IoStorefrontOutline } from "react-icons/io5";
+import toast from "react-hot-toast";
 
 export default function BotonCerrarTienda() {
   const [cerrada, setCerrada] = useState(false);
@@ -42,7 +43,7 @@ export default function BotonCerrarTienda() {
 
     if (error) {
       setCerrada(!nuevoEstado); // revertir si falla
-      alert("Error de conexión");
+      toast.error("Error de conexión");
       console.error(error);
     }
     setLoading(false);

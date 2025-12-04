@@ -55,7 +55,7 @@ export default function Navbar() {
             </div>
             <div>
               <h1 className="font-bold text-xl tracking-tight text-white">
-                Mini Market del <span className="text-indigo-200">Café</span>
+                Mini Market <span className="text-indigo-200">del Café</span>
               </h1>
               {isAdminRoute && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white border border-white/30">

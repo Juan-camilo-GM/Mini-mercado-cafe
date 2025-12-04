@@ -12,7 +12,10 @@ import {
     IoCheckmarkCircle,
     IoCashOutline,
     IoPersonOutline,
-    IoGrid
+    IoGrid,
+    IoLocationOutline,
+    IoWalletOutline,
+    IoClose
 } from "react-icons/io5";
 
 export default function RegistrarVenta() {
@@ -23,9 +26,16 @@ export default function RegistrarVenta() {
     const [filtroCategoria, setFiltroCategoria] = useState("");
     const [loading, setLoading] = useState(true);
     const [procesando, setProcesando] = useState(false);
+
+    // Estados del formulario de venta
     const [clienteNombre, setClienteNombre] = useState("");
     const [metodoPago, setMetodoPago] = useState("efectivo");
+    const [tipoEntrega, setTipoEntrega] = useState("recoger"); // recoger | domicilio
+    const [direccion, setDireccion] = useState("");
+    const [pagaCon, setPagaCon] = useState("");
+
     const [mostrarCarrito, setMostrarCarrito] = useState(false);
+    const [modalConfirmacion, setModalConfirmacion] = useState(false);
 
     useEffect(() => {
         cargarDatos();
@@ -99,11 +109,24 @@ export default function RegistrarVenta() {
     };
 
     const total = carrito.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
+    const costoEnvio = tipoEntrega === "domicilio" ? 2000 : 0;
+    const totalFinal = total + costoEnvio;
+    const cambio = (pagaCon && metodoPago === "efectivo") ? (Number(pagaCon) - totalFinal) : 0;
+
+    const abrirConfirmacion = () => {
+        if (carrito.length === 0) return;
+        if (tipoEntrega === "domicilio" && !direccion.trim()) {
+            toast.error("Debes ingresar la dirección para domicilio");
+            return;
+        }
+        if (metodoPago === "efectivo" && pagaCon && Number(pagaCon) < totalFinal) {
+            toast.error("El monto de pago es menor al total");
+            return;
+        }
+        setModalConfirmacion(true);
+    };
 
     const procesarVenta = async () => {
-        if (carrito.length === 0) return;
-        if (!confirm("¿Confirmar venta?")) return;
-
         setProcesando(true);
         try {
             // 1. Verificar stock nuevamente
@@ -122,13 +145,14 @@ export default function RegistrarVenta() {
             // 2. Crear pedido con TODOS los campos requeridos
             const pedido = {
                 cliente_nombre: clienteNombre || "Venta en Caja",
-                cliente_direccion: null, // No aplica para venta en caja
+                cliente_direccion: tipoEntrega === "domicilio" ? direccion : null,
                 subtotal: total,
-                costo_envio: 0,
-                total: total,
+                costo_envio: costoEnvio,
+                total: totalFinal,
                 estado: "confirmado",
-                tipo_entrega: "recoger", // Asumimos que es en tienda
+                tipo_entrega: tipoEntrega,
                 metodo_pago: metodoPago,
+                cambio: (metodoPago === "efectivo" && pagaCon) ? Number(pagaCon) - totalFinal : null,
                 productos: carrito.map(p => ({
                     id: p.id,
                     nombre: p.nombre,
@@ -162,6 +186,11 @@ export default function RegistrarVenta() {
             setCarrito([]);
             setClienteNombre("");
             setMetodoPago("efectivo");
+            setTipoEntrega("recoger");
+            setDireccion("");
+            setPagaCon("");
+            setModalConfirmacion(false);
+            setMostrarCarrito(false);
             cargarDatos(); // Recargar stock
 
         } catch (error) {
@@ -265,7 +294,7 @@ export default function RegistrarVenta() {
             <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 lg:hidden z-40 flex items-center justify-between shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                 <div>
                     <p className="text-sm text-slate-500">Total a cobrar</p>
-                    <p className="text-2xl font-black text-slate-900">${total.toLocaleString("es-CO")}</p>
+                    <p className="text-2xl font-black text-slate-900">${totalFinal.toLocaleString("es-CO")}</p>
                 </div>
                 <button
                     onClick={() => setMostrarCarrito(true)}
@@ -296,11 +325,12 @@ export default function RegistrarVenta() {
                                     Resumen de Venta
                                 </h2>
                                 <button onClick={() => setMostrarCarrito(false)} className="lg:hidden p-2 bg-slate-100 rounded-full text-slate-500">
-                                    <IoCheckmarkCircle className="text-xl" /> {/* Usamos check como "listo/cerrar" */}
+                                    <IoCheckmarkCircle className="text-xl" />
                                 </button>
                             </div>
 
                             <div className="space-y-3">
+                                {/* Cliente */}
                                 <div className="relative">
                                     <IoPersonOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <input
@@ -312,7 +342,43 @@ export default function RegistrarVenta() {
                                     />
                                 </div>
 
-                                {/* Selector de Método de Pago */}
+                                {/* Tipo de Entrega */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => setTipoEntrega("recoger")}
+                                        className={`py-2 px-3 rounded-lg text-sm font-medium border transition-all ${tipoEntrega === "recoger"
+                                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                    >
+                                        Recoger
+                                    </button>
+                                    <button
+                                        onClick={() => setTipoEntrega("domicilio")}
+                                        className={`py-2 px-3 rounded-lg text-sm font-medium border transition-all ${tipoEntrega === "domicilio"
+                                            ? "bg-indigo-50 border-indigo-200 text-indigo-700"
+                                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                    >
+                                        Domicilio (+$2k)
+                                    </button>
+                                </div>
+
+                                {/* Dirección si es domicilio */}
+                                {tipoEntrega === "domicilio" && (
+                                    <div className="relative animate-in slide-in-from-top duration-200">
+                                        <IoLocationOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="text"
+                                            placeholder="Dirección de entrega"
+                                            value={direccion}
+                                            onChange={(e) => setDireccion(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Método de Pago */}
                                 <select
                                     value={metodoPago}
                                     onChange={(e) => setMetodoPago(e.target.value)}
@@ -323,6 +389,25 @@ export default function RegistrarVenta() {
                                     <option value="daviplata">Daviplata</option>
                                     <option value="tarjeta">Tarjeta</option>
                                 </select>
+
+                                {/* Paga con... si es efectivo */}
+                                {metodoPago === "efectivo" && (
+                                    <div className="relative animate-in slide-in-from-top duration-200">
+                                        <IoWalletOutline className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                            type="number"
+                                            placeholder="¿Con cuánto paga?"
+                                            value={pagaCon}
+                                            onChange={(e) => setPagaCon(e.target.value)}
+                                            className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        />
+                                        {pagaCon && Number(pagaCon) >= totalFinal && (
+                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">
+                                                Cambio: ${cambio.toLocaleString("es-CO")}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -377,29 +462,32 @@ export default function RegistrarVenta() {
 
                         {/* Footer Totales */}
                         <div className="p-6 border-t border-slate-100 bg-slate-50/50 lg:rounded-b-2xl space-y-4">
-                            <div className="flex justify-between items-center text-slate-600">
-                                <span>Subtotal</span>
-                                <span>${total.toLocaleString("es-CO")}</span>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center text-slate-600 text-sm">
+                                    <span>Subtotal</span>
+                                    <span>${total.toLocaleString("es-CO")}</span>
+                                </div>
+                                {tipoEntrega === "domicilio" && (
+                                    <div className="flex justify-between items-center text-slate-600 text-sm">
+                                        <span>Domicilio</span>
+                                        <span>${costoEnvio.toLocaleString("es-CO")}</span>
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex justify-between items-center text-2xl font-black text-slate-900">
+                            <div className="flex justify-between items-center text-2xl font-black text-slate-900 pt-2 border-t border-slate-200">
                                 <span>Total</span>
-                                <span>${total.toLocaleString("es-CO")}</span>
+                                <span>${totalFinal.toLocaleString("es-CO")}</span>
                             </div>
 
                             <button
-                                onClick={() => { procesarVenta(); setMostrarCarrito(false); }}
+                                onClick={abrirConfirmacion}
                                 disabled={carrito.length === 0 || procesando}
                                 className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 shadow-lg transition-all ${carrito.length === 0 || procesando
                                     ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                                     : "bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/30 hover:-translate-y-0.5"
                                     }`}
                             >
-                                {procesando ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        Procesando...
-                                    </>
-                                ) : (
+                                {procesando ? "Procesando..." : (
                                     <>
                                         <IoCheckmarkCircle size={24} />
                                         Confirmar Venta
@@ -410,6 +498,40 @@ export default function RegistrarVenta() {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL DE CONFIRMACIÓN */}
+            {modalConfirmacion && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-6 text-center">
+                            <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <IoCheckmarkCircle size={32} />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">¿Confirmar Venta?</h3>
+                            <p className="text-slate-500 mb-6">
+                                Se registrará la venta por <strong>${totalFinal.toLocaleString("es-CO")}</strong>
+                                {tipoEntrega === "domicilio" && " con envío a domicilio"}
+                                .
+                            </p>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setModalConfirmacion(false)}
+                                    className="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={procesarVenta}
+                                    className="py-3 px-4 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/30"
+                                >
+                                    Confirmar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

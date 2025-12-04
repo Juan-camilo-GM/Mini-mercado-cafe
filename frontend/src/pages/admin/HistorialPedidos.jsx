@@ -110,10 +110,38 @@ const PedidoRow = ({ pedido, onEstadoChange, onEliminar }) => {
                 <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                   <h4 className="font-semibold text-slate-800 flex items-center gap-2">
                     <IoCartOutline className="text-indigo-500" />
-                    Detalle del Pedido
+                    Detalle del Pedido #{pedido.id}
                   </h4>
                   <span className="text-sm text-slate-500">{pedido.productos?.length || 0} productos</span>
                 </div>
+
+                {/* INFO EXTRA DEL PEDIDO */}
+                <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-slate-100 bg-indigo-50/10">
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase">Tipo de Entrega</p>
+                    <p className="text-slate-800 font-medium capitalize flex items-center gap-2">
+                      {pedido.tipo_entrega === "domicilio" ? "Domicilio" : "En tienda"}
+                    </p>
+                  </div>
+                  {pedido.tipo_entrega === "domicilio" && (
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 uppercase">Dirección</p>
+                      <p className="text-slate-800 font-medium">{pedido.cliente_direccion || "Sin dirección"}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase">Método de Pago</p>
+                    <p className="text-slate-800 font-medium capitalize">
+                      {pedido.metodo_pago}
+                      {pedido.metodo_pago === "efectivo" && pedido.cambio && (
+                        <span className="text-xs text-slate-500 block">
+                          (Cambio: ${parseInt(pedido.cambio).toLocaleString("es-CO")})
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {(pedido.productos || []).map((prod, i) => (
                     <div
@@ -132,7 +160,15 @@ const PedidoRow = ({ pedido, onEstadoChange, onEliminar }) => {
                     </div>
                   ))}
                 </div>
-                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-8 items-center">
+                  {pedido.costo_envio > 0 && (
+                    <div className="text-right">
+                      <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Envío</p>
+                      <p className="text-lg font-bold text-slate-700">
+                        ${parseInt(pedido.costo_envio).toLocaleString("es-CO")}
+                      </p>
+                    </div>
+                  )}
                   <div className="text-right">
                     <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total a Pagar</p>
                     <p className="text-xl font-bold text-slate-900">
@@ -199,6 +235,9 @@ export default function HistorialPedidos() {
   const [fechaFin, setFechaFin] = useState(format(new Date(), "yyyy-MM-dd"));
   const [pagina, setPagina] = useState(1);
   const itemsPorPagina = 12;
+
+  // Modal eliminar
+  const [pedidoAEliminar, setPedidoAEliminar] = useState(null);
 
   // Cargar datos para la pestaña de ventas
   useEffect(() => {
@@ -344,10 +383,18 @@ export default function HistorialPedidos() {
       });
     }
   };
-  const eliminarPedido = async (id) => {
-    if (!window.confirm("¿Eliminar este pedido permanentemente?")) return;
-    await supabase.from("pedidos").delete().eq("id", id);
+
+
+  const confirmarEliminacion = async () => {
+    if (!pedidoAEliminar) return;
+    await supabase.from("pedidos").delete().eq("id", pedidoAEliminar);
+    setPedidoAEliminar(null);
+    toast.success("Pedido eliminado correctamente");
     fetchPedidos();
+  };
+
+  const eliminarPedido = (id) => {
+    setPedidoAEliminar(id);
   };
 
   // Filtrado y cálculos para ventas
@@ -763,8 +810,8 @@ export default function HistorialPedidos() {
             <button
               onClick={() => setTabActivo("ventas")}
               className={`flex-1 py-4 px-6 text-center font-medium transition-all relative ${tabActivo === "ventas"
-                  ? "text-indigo-600 bg-indigo-50/50"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                ? "text-indigo-600 bg-indigo-50/50"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 }`}
             >
               <div className="flex items-center justify-center gap-2">
@@ -779,8 +826,8 @@ export default function HistorialPedidos() {
             <button
               onClick={() => setTabActivo("proveedores")}
               className={`flex-1 py-4 px-6 text-center font-medium transition-all relative ${tabActivo === "proveedores"
-                  ? "text-indigo-600 bg-indigo-50/50"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                ? "text-indigo-600 bg-indigo-50/50"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                 }`}
             >
               <div className="flex items-center justify-center gap-2">
@@ -798,6 +845,39 @@ export default function HistorialPedidos() {
             {renderContenido()}
           </div>
         </div>
+
+        {/* MODAL ELIMINAR */}
+        {pedidoAEliminar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <IoTrashBin size={32} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900 mb-2">¿Eliminar Pedido?</h3>
+                <p className="text-slate-500 mb-6">
+                  Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar este pedido permanentemente?
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setPedidoAEliminar(null)}
+                    className="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarEliminacion}
+                    className="py-3 px-4 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors shadow-lg shadow-rose-500/30"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

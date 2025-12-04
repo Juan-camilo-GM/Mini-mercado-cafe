@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
+import { supabase } from "../../lib/supabase";
 import { obtenerProductos } from "../../lib/productos";
 import { obtenerCategorias } from "../../lib/categorias";
 import CarritoFlotante from "../../components/CarritoFlotante";
@@ -11,23 +12,23 @@ function ProductoSkeleton() {
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
       {/* Imagen skeleton */}
       <div className="aspect-square bg-gray-200"></div>
-      
+
       {/* Contenido skeleton */}
       <div className="p-3 pt-2 space-y-3">
         {/* Categoría */}
         <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-        
+
         {/* Título */}
         <div className="space-y-2">
           <div className="h-4 bg-gray-200 rounded w-full"></div>
           <div className="h-4 bg-gray-200 rounded w-4/5"></div>
         </div>
-        
+
         {/* Precio */}
         <div className="border-t border-gray-100 pt-3 mt-3">
           <div className="h-6 bg-gray-200 rounded w-1/2"></div>
         </div>
-        
+
         {/* Botón */}
         <div className="h-10 bg-gray-200 rounded-xl mt-3"></div>
       </div>
@@ -43,12 +44,12 @@ export default function Catalogo() {
   const [filtroCategoria, setFiltroCategoria] = useState("");
   const [carrito, setCarrito] = useState([]);
   const [cargando, setCargando] = useState(true);
-  
+
   // Estados para paginación infinita
   const [paginaActual, setPaginaActual] = useState(1);
   const [cargandoMas, setCargandoMas] = useState(false);
   const PRODUCTOS_POR_PAGINA = 24;
-  
+
   const observerTarget = useRef(null);
 
   // Cargar productos y categorías
@@ -68,6 +69,23 @@ export default function Catalogo() {
       }
     }
     cargarDatos();
+
+    // Suscripción en tiempo real a cambios en productos
+    const channel = supabase
+      .channel("productos_catalogo")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "productos" },
+        () => {
+          // Recargar productos silenciosamente
+          obtenerProductos().then(setProductos);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Cargar carrito desde localStorage al iniciar
@@ -176,7 +194,7 @@ export default function Catalogo() {
   };
 
   return (
-    <div className="p-4 md:p-10 bg-gray-50/50 border-b min-h-screen">
+    <div className="p-4 md:p-10 bg-gray-50/50  min-h-screen">
       <h1 className="text-5xl md:text-7xl font-black mb-12 pt-8 leading-tight tracking-tight">
         {/* Palabra principal con gradiente púrpura-índigo exacto */}
         <span className="text-transparent bg-clip-text 
@@ -287,8 +305,8 @@ export default function Catalogo() {
               <article
                 key={p.id}
                 className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-400 flex flex-col h-full
-                  ${estaAgotado 
-                    ? "opacity-65 grayscale" 
+                  ${estaAgotado
+                    ? "opacity-65 grayscale"
                     : "shadow-xl hover:shadow-2xl hover:-translate-y-2 ring-1 ring-gray-100"
                   }`}
               >
@@ -306,13 +324,13 @@ export default function Catalogo() {
                           max-w-[100px] sm:max-w-[120px] md:max-w-[150px] lg:max-w-none truncate
                     ${p.categoria_id === 1 ? "bg-orange-500" :
                       p.categoria_id === 2 ? "bg-emerald-600" :
-                      p.categoria_id === 3 ? "bg-sky-600" :
-                      p.categoria_id === 4 ? "bg-amber-600" :
-                      p.categoria_id === 5 ? "bg-yellow-600" :
-                      p.categoria_id === 6 ? "bg-lime-600" :
-                      p.categoria_id === 7 ? "bg-green-600" :
-                      p.categoria_id === 8 ? "bg-violet-600" :
-                      p.categoria_id === 9 ? "bg-pink-600" : "bg-purple-600"}`}>
+                        p.categoria_id === 3 ? "bg-sky-600" :
+                          p.categoria_id === 4 ? "bg-amber-600" :
+                            p.categoria_id === 5 ? "bg-yellow-600" :
+                              p.categoria_id === 6 ? "bg-lime-600" :
+                                p.categoria_id === 7 ? "bg-green-600" :
+                                  p.categoria_id === 8 ? "bg-violet-600" :
+                                    p.categoria_id === 9 ? "bg-pink-600" : "bg-purple-600"}`}>
                     {catMap[p.categoria_id] || "General"}
                   </span>
 
@@ -376,8 +394,8 @@ export default function Catalogo() {
                   </div>
                 ) : (
                   <div className="px-4 pb-4 sm:px-5 sm:pb-5">
-                    <button 
-                      disabled 
+                    <button
+                      disabled
                       className="w-full py-3 sm:py-4 text-sm sm:text-lg font-bold bg-gray-300 text-gray-600 rounded-xl sm:rounded-2xl cursor-not-allowed"
                     >
                       Sin stock

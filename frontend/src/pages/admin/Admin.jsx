@@ -185,57 +185,29 @@ export default function Productos() {
     }
   };
 
-  const borrar = async (id) => {
-    // Reemplazamos el window.confirm por un toast con confirmación
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-2xl pointer-events-auto flex flex-col border border-gray-200`}>
-        <div className="flex-1 p-5">
-          <div className="flex items-start">
-            <div className="flex-shrink-0 pt-0.5">
-              <IoAlertCircleOutline className="h-6 w-6 text-red-600" />
-            </div>
-            <div className="ml-4 flex-1">
-              <h3 className="text-lg font-semibold text-gray-900">¿Eliminar producto?</h3>
-              <p className="mt-1 text-gray-600">Esta acción no se puede deshacer. El producto se eliminará permanentemente.</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex border-t border-gray-200">
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-            }}
-            className="flex-1 py-3.5 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-bl-2xl transition"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                await eliminarProducto(id);
-                setProductos(prev => prev.filter(p => p.id !== id));
-                toast.success("Producto eliminado correctamente", {
-                  icon: <IoTrashOutline size={22} />,
-                  duration: 4000,
-                });
-              } catch (e) {
-                console.error("Error al eliminar:", e);
-                toast.error("Error al eliminar el producto", {
-                  icon: <IoCloseCircleOutline size={22} />,
-                  duration: 5000,
-                });
-              }
-            }}
-            className="flex-1 py-3.5 text-base font-medium text-red-600 hover:bg-red-50 rounded-br-2xl transition border-l border-gray-200"
-          >
-            Eliminar
-          </button>
-        </div>
-      </div>
-    ), {
-      duration: Infinity, // Permanece hasta que el usuario decida
-    });
+  const [productoAEliminar, setProductoAEliminar] = useState(null);
+
+  const confirmarEliminacion = async () => {
+    if (!productoAEliminar) return;
+    try {
+      await eliminarProducto(productoAEliminar);
+      setProductos(prev => prev.filter(p => p.id !== productoAEliminar));
+      toast.success("Producto eliminado correctamente", {
+        icon: <IoTrashOutline size={22} />,
+        duration: 4000,
+      });
+      setProductoAEliminar(null);
+    } catch (e) {
+      console.error("Error al eliminar:", e);
+      toast.error("Error al eliminar el producto", {
+        icon: <IoCloseCircleOutline size={22} />,
+        duration: 5000,
+      });
+    }
+  };
+
+  const borrar = (id) => {
+    setProductoAEliminar(id);
   };
 
   // FILTROS
@@ -469,6 +441,37 @@ export default function Productos() {
                 </button>
                 <button onClick={guardar} disabled={loading} className="px-8 py-3.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-bold shadow-lg hover:shadow-xl active:scale-98 transition flex items-center gap-3 cursor-pointer">
                   {loading ? "Guardando..." : "Guardar producto"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ==================== MODAL ELIMINAR ==================== */}
+      {productoAEliminar && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <IoTrashBin size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">¿Eliminar Producto?</h3>
+              <p className="text-slate-500 mb-6">
+                Esta acción no se puede deshacer. ¿Estás seguro de que quieres eliminar este producto permanentemente?
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setProductoAEliminar(null)}
+                  className="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarEliminacion}
+                  className="py-3 px-4 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors shadow-lg shadow-rose-500/30"
+                >
+                  Eliminar
                 </button>
               </div>
             </div>

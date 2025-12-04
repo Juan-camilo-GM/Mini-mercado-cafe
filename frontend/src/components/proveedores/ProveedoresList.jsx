@@ -7,11 +7,11 @@ import toast from "react-hot-toast";
 const ProveedoresList = ({ proveedores, onRefresh }) => {
   const [editandoProveedor, setEditandoProveedor] = useState(null);
   const [busquedaProveedor, setBusquedaProveedor] = useState("");
-  
+
   // Estados para paginación
   const [paginaActual, setPaginaActual] = useState(1);
   const [itemsPorPagina, setItemsPorPagina] = useState(10);
-  
+
   const [formProveedor, setFormProveedor] = useState({
     nombre: "",
     contacto: "",
@@ -22,12 +22,12 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
   });
 
   // Filtrar proveedores por búsqueda
-  const proveedoresFiltrados = busquedaProveedor 
-    ? proveedores.filter(prov => 
-        prov.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase()) ||
-        prov.contacto?.toLowerCase().includes(busquedaProveedor.toLowerCase()) ||
-        prov.email?.toLowerCase().includes(busquedaProveedor.toLowerCase())
-      )
+  const proveedoresFiltrados = busquedaProveedor
+    ? proveedores.filter(prov =>
+      prov.nombre.toLowerCase().includes(busquedaProveedor.toLowerCase()) ||
+      prov.contacto?.toLowerCase().includes(busquedaProveedor.toLowerCase()) ||
+      prov.email?.toLowerCase().includes(busquedaProveedor.toLowerCase())
+    )
     : proveedores;
 
   // Calcular paginación
@@ -55,7 +55,7 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
   const generarNumerosPagina = () => {
     const paginas = [];
     const paginasAMostrar = 5;
-    
+
     if (totalPaginas <= paginasAMostrar) {
       for (let i = 1; i <= totalPaginas; i++) {
         paginas.push(i);
@@ -63,16 +63,16 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
     } else {
       let inicio = Math.max(1, paginaActual - 2);
       let fin = Math.min(totalPaginas, inicio + paginasAMostrar - 1);
-      
+
       if (fin - inicio + 1 < paginasAMostrar) {
         inicio = Math.max(1, fin - paginasAMostrar + 1);
       }
-      
+
       for (let i = inicio; i <= fin; i++) {
         paginas.push(i);
       }
     }
-    
+
     return paginas;
   };
 
@@ -96,10 +96,10 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
       });
       return;
     }
-    
+
     try {
       let error;
-      
+
       if (editandoProveedor) {
         const { error: updateError } = await supabase
           .from("proveedores")
@@ -112,27 +112,27 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
           .insert([formProveedor]);
         error = insertError;
       }
-      
+
       if (error) throw error;
-      
+
       toast.success(`Proveedor ${editandoProveedor ? "actualizado" : "registrado"} exitosamente`, {
         icon: <IoCheckmarkCircleOutline size={22} />,
         duration: 4000,
       });
-      
+
       onRefresh();
       setEditandoProveedor(null);
       setFormProveedor({
         nombre: "", contacto: "", telefono: "", email: "", direccion: "", productos_sum: ""
       });
-      
+
     } catch (error) {
       console.error("Error guardando proveedor:", error);
-      
-      const mensaje = error.message?.includes("network") 
+
+      const mensaje = error.message?.includes("network")
         ? "Error de conexión. Revisa tu internet e intenta de nuevo."
         : "Error al guardar el proveedor";
-        
+
       toast.error(mensaje, {
         icon: <IoCloseCircleOutline size={22} />,
         duration: 5000,
@@ -140,119 +140,94 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
     }
   };
 
-  const eliminarProveedor = async (id, nombre) => {
-    // Toast de confirmación personalizado
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-2xl pointer-events-auto flex flex-col border border-gray-200`}>
-        <div className="flex-1 p-5">
-          <div className="flex items-start">
-            <div className="flex-shrink-0 pt-0.5">
-              <IoAlertCircleOutline className="h-6 w-6 text-red-600" />
+  const [proveedorAEliminar, setProveedorAEliminar] = useState(null);
+
+  const confirmarEliminacion = async () => {
+    if (!proveedorAEliminar) return;
+    const { id } = proveedorAEliminar;
+
+    try {
+      // Verificar si el proveedor tiene facturas o pedidos asociados
+      const { data: facturas, error: facturasError } = await supabase
+        .from("facturas")
+        .select("id")
+        .eq("proveedor_id", id)
+        .limit(1);
+
+      if (facturasError) throw facturasError;
+
+      const { data: pedidos, error: pedidosError } = await supabase
+        .from("pedidos_proveedor")
+        .select("id")
+        .eq("proveedor_id", id)
+        .limit(1);
+
+      if (pedidosError) throw pedidosError;
+
+      if (facturas.length > 0 || pedidos.length > 0) {
+        setProveedorAEliminar(null); // Cerrar modal
+        // Toast de advertencia para proveedores con relaciones
+        toast.custom((t2) => (
+          <div className={`${t2.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-xl pointer-events-auto flex flex-col border border-gray-200`}>
+            <div className="flex-1 p-5">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <IoAlertCircleOutline className="h-6 w-6 text-orange-600" />
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900">No se puede eliminar</h3>
+                  <p className="mt-1 text-gray-600">Este proveedor tiene facturas o pedidos asociados. Primero elimine los registros relacionados.</p>
+                </div>
+              </div>
             </div>
-            <div className="ml-4 flex-1">
-              <h3 className="text-lg font-semibold text-gray-900">¿Eliminar proveedor?</h3>
-              <p className="mt-1 text-gray-600">¿Estás seguro de eliminar al proveedor "{nombre}"? Esta acción no se puede deshacer.</p>
+            <div className="flex border-t border-gray-200">
+              <button
+                onClick={() => {
+                  toast.dismiss(t2.id);
+                }}
+                className="flex-1 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-bl-xl rounded-br-xl transition"
+              >
+                Entendido
+              </button>
             </div>
           </div>
-        </div>
-        <div className="flex border-t border-gray-200">
-          <button
-            onClick={() => {
-              toast.dismiss(t.id);
-            }}
-            className="flex-1 py-3.5 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-bl-2xl transition"
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={async () => {
-              toast.dismiss(t.id);
-              try {
-                // Verificar si el proveedor tiene facturas o pedidos asociados
-                const { data: facturas, error: facturasError } = await supabase
-                  .from("facturas")
-                  .select("id")
-                  .eq("proveedor_id", id)
-                  .limit(1);
-                
-                if (facturasError) throw facturasError;
-                
-                const { data: pedidos, error: pedidosError } = await supabase
-                  .from("pedidos_proveedor")
-                  .select("id")
-                  .eq("proveedor_id", id)
-                  .limit(1);
-                
-                if (pedidosError) throw pedidosError;
-                
-                if (facturas.length > 0 || pedidos.length > 0) {
-                  // Toast de advertencia para proveedores con relaciones
-                  toast.custom((t2) => (
-                    <div className={`${t2.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-xl pointer-events-auto flex flex-col border border-gray-200`}>
-                      <div className="flex-1 p-5">
-                        <div className="flex items-start">
-                          <div className="flex-shrink-0 pt-0.5">
-                            <IoAlertCircleOutline className="h-6 w-6 text-orange-600" />
-                          </div>
-                          <div className="ml-4 flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">No se puede eliminar</h3>
-                            <p className="mt-1 text-gray-600">Este proveedor tiene facturas o pedidos asociados. Primero elimine los registros relacionados.</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex border-t border-gray-200">
-                        <button
-                          onClick={() => {
-                            toast.dismiss(t2.id);
-                          }}
-                          className="flex-1 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 rounded-bl-xl rounded-br-xl transition"
-                        >
-                          Entendido
-                        </button>
-                      </div>
-                    </div>
-                  ), {
-                    duration: Infinity,
-                  });
-                  return;
-                }
-                
-                const { error } = await supabase
-                  .from("proveedores")
-                  .delete()
-                  .eq("id", id);
-                
-                if (error) throw error;
-                
-                toast.success("Proveedor eliminado exitosamente", {
-                  icon: <IoTrashOutline size={22} />,
-                  duration: 4000,
-                });
-                
-                onRefresh();
-                
-              } catch (error) {
-                console.error("Error eliminando proveedor:", error);
-                
-                const mensaje = error.message?.includes("network") 
-                  ? "Error de conexión. Revisa tu internet e intenta de nuevo."
-                  : "Error al eliminar el proveedor";
-                    
-                toast.error(mensaje, {
-                  icon: <IoCloseCircleOutline size={22} />,
-                  duration: 5000,
-                });
-              }
-            }}
-            className="flex-1 py-3.5 text-base font-medium text-red-600 hover:bg-red-50 rounded-br-2xl transition border-l border-gray-200"
-          >
-            Eliminar
-          </button>
-        </div>
-      </div>
-    ), {
-      duration: Infinity,
-    });
+        ), {
+          duration: Infinity,
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from("proveedores")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast.success("Proveedor eliminado exitosamente", {
+        icon: <IoTrashOutline size={22} />,
+        duration: 4000,
+      });
+
+      onRefresh();
+      setProveedorAEliminar(null);
+
+    } catch (error) {
+      console.error("Error eliminando proveedor:", error);
+
+      const mensaje = error.message?.includes("network")
+        ? "Error de conexión. Revisa tu internet e intenta de nuevo."
+        : "Error al eliminar el proveedor";
+
+      toast.error(mensaje, {
+        icon: <IoCloseCircleOutline size={22} />,
+        duration: 5000,
+      });
+    }
+  };
+
+  const eliminarProveedor = (id, nombre) => {
+    setProveedorAEliminar({ id, nombre });
   };
 
   return (
@@ -267,7 +242,7 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
             Mostrando {indiceInicial + 1}-{Math.min(indiceFinal, proveedoresFiltrados.length)} de {proveedoresFiltrados.length}
           </p>
         </div>
-        
+
         <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           {/* Selector de items por página */}
           <div className="flex items-center gap-2">
@@ -283,7 +258,7 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
               <option value="50">50</option>
             </select>
           </div>
-          
+
           {/* Buscador de proveedores */}
           <div className="relative">
             <IoSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -305,7 +280,7 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Tabla de proveedores */}
       <div className="overflow-x-auto mb-6">
         <table className="w-full">
@@ -348,68 +323,65 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
           </tbody>
         </table>
       </div>
-      
+
       {/* Mensaje sin resultados */}
       {proveedoresPaginados.length === 0 && (
         <div className="text-center py-8 text-gray-500">
-          {busquedaProveedor 
+          {busquedaProveedor
             ? `No hay proveedores que coincidan con "${busquedaProveedor}"`
             : "No hay proveedores registrados"}
         </div>
       )}
-      
+
       {/* Paginación */}
       {totalPaginas > 1 && (
         <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t">
           <div className="text-sm text-gray-600">
             Página {paginaActual} de {totalPaginas}
           </div>
-          
+
           <div className="flex items-center gap-2">
             {/* Botón anterior */}
             <button
               onClick={() => cambiarPagina(paginaActual - 1)}
               disabled={paginaActual === 1}
-              className={`px-3 py-1 rounded-lg border ${
-                paginaActual === 1 
-                  ? 'text-gray-400 cursor-not-allowed' 
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-1 rounded-lg border ${paginaActual === 1
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               ← Anterior
             </button>
-            
+
             {/* Números de página */}
             <div className="flex gap-1">
               {generarNumerosPagina().map((pagina) => (
                 <button
                   key={pagina}
                   onClick={() => cambiarPagina(pagina)}
-                  className={`w-8 h-8 rounded-lg ${
-                    pagina === paginaActual
-                      ? 'bg-indigo-600 text-white'
-                      : 'border text-gray-700 hover:bg-gray-50'
-                  }`}
+                  className={`w-8 h-8 rounded-lg ${pagina === paginaActual
+                    ? 'bg-indigo-600 text-white'
+                    : 'border text-gray-700 hover:bg-gray-50'
+                    }`}
                 >
                   {pagina}
                 </button>
               ))}
             </div>
-            
+
             {/* Botón siguiente */}
             <button
               onClick={() => cambiarPagina(paginaActual + 1)}
               disabled={paginaActual === totalPaginas}
-              className={`px-3 py-1 rounded-lg border ${
-                paginaActual === totalPaginas 
-                  ? 'text-gray-400 cursor-not-allowed' 
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
+              className={`px-3 py-1 rounded-lg border ${paginaActual === totalPaginas
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-gray-700 hover:bg-gray-50'
+                }`}
             >
               Siguiente →
             </button>
           </div>
-          
+
           {/* Input para ir a página específica */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Ir a:</span>
@@ -451,7 +423,7 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
                 <IoClose size={24} />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -461,12 +433,12 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
                   type="text"
                   placeholder="Ej: Distribuidora ABC S.A."
                   value={formProveedor.nombre}
-                  onChange={(e) => setFormProveedor({...formProveedor, nombre: e.target.value})}
+                  onChange={(e) => setFormProveedor({ ...formProveedor, nombre: e.target.value })}
                   className="w-full p-3 border rounded-lg"
                   required
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Contacto</label>
@@ -474,7 +446,7 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
                     type="text"
                     placeholder="Ej: Juan Pérez"
                     value={formProveedor.contacto}
-                    onChange={(e) => setFormProveedor({...formProveedor, contacto: e.target.value})}
+                    onChange={(e) => setFormProveedor({ ...formProveedor, contacto: e.target.value })}
                     className="w-full p-3 border rounded-lg"
                   />
                 </div>
@@ -484,45 +456,45 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
                     type="tel"
                     placeholder="Ej: 3001234567"
                     value={formProveedor.telefono}
-                    onChange={(e) => setFormProveedor({...formProveedor, telefono: e.target.value})}
+                    onChange={(e) => setFormProveedor({ ...formProveedor, telefono: e.target.value })}
                     className="w-full p-3 border rounded-lg"
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Email</label>
                 <input
                   type="email"
                   placeholder="Ej: contacto@proveedor.com"
                   value={formProveedor.email}
-                  onChange={(e) => setFormProveedor({...formProveedor, email: e.target.value})}
+                  onChange={(e) => setFormProveedor({ ...formProveedor, email: e.target.value })}
                   className="w-full p-3 border rounded-lg"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Dirección</label>
                 <textarea
                   placeholder="Dirección completa del proveedor"
                   value={formProveedor.direccion}
-                  onChange={(e) => setFormProveedor({...formProveedor, direccion: e.target.value})}
+                  onChange={(e) => setFormProveedor({ ...formProveedor, direccion: e.target.value })}
                   className="w-full p-3 border rounded-lg"
                   rows="2"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Productos que suministra</label>
                 <textarea
                   placeholder="Lista de productos o servicios que provee"
                   value={formProveedor.productos_sum}
-                  onChange={(e) => setFormProveedor({...formProveedor, productos_sum: e.target.value})}
+                  onChange={(e) => setFormProveedor({ ...formProveedor, productos_sum: e.target.value })}
                   className="w-full p-3 border rounded-lg"
                   rows="3"
                 />
               </div>
-              
+
               <div className="flex gap-3 justify-end pt-4 border-t">
                 <button
                   onClick={() => {
@@ -540,6 +512,38 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
                   className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 >
                   {editandoProveedor ? "Actualizar" : "Guardar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Eliminación */}
+      {proveedorAEliminar && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <IoTrashBin size={32} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">¿Eliminar Proveedor?</h3>
+              <p className="text-slate-500 mb-6">
+                ¿Estás seguro de eliminar a <strong>{proveedorAEliminar.nombre}</strong>? Esta acción no se puede deshacer.
+              </p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={() => setProveedorAEliminar(null)}
+                  className="py-3 px-4 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarEliminacion}
+                  className="py-3 px-4 rounded-xl bg-rose-600 text-white font-semibold hover:bg-rose-700 transition-colors shadow-lg shadow-rose-500/30"
+                >
+                  Eliminar
                 </button>
               </div>
             </div>
