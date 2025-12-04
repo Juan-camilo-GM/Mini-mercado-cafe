@@ -607,7 +607,7 @@ export default function HistorialPedidos() {
                 Ventas últimos 7 días
               </h3>
               <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={ultimos7Dias}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis
