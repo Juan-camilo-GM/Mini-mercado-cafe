@@ -338,7 +338,8 @@ const PedidosProveedor = ({ pedidos, proveedores, productos, onRefresh }) => {
       </div>
 
       {/* Tabla de pedidos */}
-      <div className="overflow-x-auto">
+      {/* Tabla de pedidos (Desktop) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold">
             <tr>
@@ -436,6 +437,91 @@ const PedidosProveedor = ({ pedidos, proveedores, productos, onRefresh }) => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Lista de pedidos (Mobile) */}
+      <div className="md:hidden space-y-4 p-4 bg-slate-50/50">
+        {pedidosPaginados.map((pedido) => (
+          <div key={pedido.id} className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-4 border-b border-slate-50 bg-slate-50/30 flex justify-between items-start">
+              <div>
+                <h4 className="font-bold text-slate-800 text-sm mb-1">{pedido.proveedores?.nombre}</h4>
+                <p className="text-xs text-slate-500">{format(new Date(pedido.created_at), "dd/MM/yyyy")}</p>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${pedido.estado === "confirmado"
+                ? "bg-emerald-100 text-emerald-700"
+                : pedido.estado === "cancelado"
+                  ? "bg-rose-100 text-rose-700"
+                  : "bg-amber-100 text-amber-700"
+                }`}>
+                {pedido.estado === "confirmado" ? "Conf." :
+                  pedido.estado === "cancelado" ? "Canc." : "Pend."}
+              </span>
+            </div>
+
+            <div className="p-4 flex justify-between items-center">
+              <span className="text-sm text-slate-500 font-medium">Total:</span>
+              <span className="text-xl font-bold text-rose-600">
+                ${parseFloat(pedido.total || 0).toLocaleString("es-CO")}
+              </span>
+            </div>
+
+            <div className="p-3 bg-slate-50 border-t border-slate-100 grid grid-cols-5 gap-2">
+              <button
+                onClick={() => abrirVerPedido(pedido)}
+                className="col-span-1 flex items-center justify-center p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                title="Ver"
+              >
+                <IoEyeOutline size={20} />
+              </button>
+
+              {pedido.estado === "pendiente" ? (
+                <>
+                  <button
+                    onClick={() => cambiarEstadoPedido(pedido.id, "confirmado")}
+                    className="col-span-1 flex items-center justify-center p-2 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                    title="Confirmar"
+                  >
+                    <IoCheckmarkCircle size={20} />
+                  </button>
+                  <button
+                    onClick={() => cambiarEstadoPedido(pedido.id, "cancelado")}
+                    className="col-span-1 flex items-center justify-center p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100"
+                    title="Cancelar"
+                  >
+                    <IoCloseCircle size={20} />
+                  </button>
+                </>
+              ) : pedido.estado === "confirmado" ? (
+                <button
+                  onClick={() => cambiarEstadoPedido(pedido.id, "cancelado")}
+                  className="col-span-2 flex items-center justify-center p-2 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100"
+                  title="Cancelar"
+                >
+                  <IoCloseCircle size={20} />
+                </button>
+              ) : (
+                <button
+                  onClick={() => cambiarEstadoPedido(pedido.id, "pendiente")}
+                  className="col-span-2 flex items-center justify-center p-2 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100"
+                  title="Reactivar"
+                >
+                  <IoCheckmarkCircle size={20} />
+                </button>
+              )}
+
+              <div className="addToGrid col-start-5">
+                <button
+                  onClick={() => eliminarPedido(pedido)}
+                  className="w-full h-full flex items-center justify-center p-2 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-500 hover:bg-rose-50"
+                  title="Eliminar"
+                >
+                  <IoTrashBin size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Mensaje sin resultados */}
@@ -650,8 +736,8 @@ const PedidosProveedor = ({ pedidos, proveedores, productos, onRefresh }) => {
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-6 text-center">
               <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${pedidoACambiarEstado.nuevoEstado === 'confirmado' ? 'bg-emerald-100 text-emerald-600' :
-                  pedidoACambiarEstado.nuevoEstado === 'cancelado' ? 'bg-rose-100 text-rose-600' :
-                    'bg-amber-100 text-amber-600'
+                pedidoACambiarEstado.nuevoEstado === 'cancelado' ? 'bg-rose-100 text-rose-600' :
+                  'bg-amber-100 text-amber-600'
                 }`}>
                 {pedidoACambiarEstado.nuevoEstado === 'confirmado' ? <IoCheckmarkCircle size={32} /> :
                   pedidoACambiarEstado.nuevoEstado === 'cancelado' ? <IoCloseCircle size={32} /> :
@@ -680,8 +766,8 @@ const PedidosProveedor = ({ pedidos, proveedores, productos, onRefresh }) => {
                 <button
                   onClick={confirmarCambioEstado}
                   className={`py-3 px-4 rounded-xl text-white font-semibold transition-colors shadow-lg ${pedidoACambiarEstado.nuevoEstado === 'confirmado' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/30' :
-                      pedidoACambiarEstado.nuevoEstado === 'cancelado' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30' :
-                        'bg-amber-600 hover:bg-amber-700 shadow-amber-500/30'
+                    pedidoACambiarEstado.nuevoEstado === 'cancelado' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30' :
+                      'bg-amber-600 hover:bg-amber-700 shadow-amber-500/30'
                     }`}
                 >
                   {pedidoACambiarEstado.nuevoEstado === 'confirmado' ? 'Confirmar' :

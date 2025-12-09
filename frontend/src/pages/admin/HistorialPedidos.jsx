@@ -7,7 +7,9 @@ import {
   IoDownloadOutline,
   IoTrashBin,
   IoStatsChartOutline,
-  IoListOutline
+  IoListOutline,
+  IoMenu,
+  IoClose
 } from "react-icons/io5";
 
 // Hooks
@@ -26,6 +28,7 @@ import ProveedoresDashboard from "../../components/proveedores/ProveedoresDashbo
 export default function HistorialPedidos() {
   // Tabs state: 'resumen', 'pedidos', 'proveedores'
   const [tabActivo, setTabActivo] = useState("resumen");
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   // Custom Hooks
   // We need data for both "resumen" and "pedidos", so we treat them as "ventas" context
@@ -325,7 +328,7 @@ export default function HistorialPedidos() {
           {tabActivo === "pedidos" && (
             <button
               onClick={exportarCSV}
-              className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 hover:-translate-y-0.5"
+              className="hidden md:flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/40 hover:-translate-y-0.5"
             >
               <IoDownloadOutline size={20} />
               Exportar CSV
@@ -333,9 +336,53 @@ export default function HistorialPedidos() {
           )}
         </div>
 
-        {/* Tabs & Content */}
+        {/* Tabs Container */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-          <div className="flex border-b border-slate-100 overflow-x-auto">
+
+          {/* Mobile Menu Header */}
+          <div className="md:hidden p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+            <span className="font-bold text-slate-800 flex items-center gap-2 text-lg">
+              {tabActivo === 'resumen' && <><IoStatsChartOutline className="text-indigo-600" size={22} /> Resumen</>}
+              {tabActivo === 'pedidos' && <><IoListOutline className="text-indigo-600" size={22} /> Pedidos</>}
+              {tabActivo === 'proveedores' && <><IoStorefrontOutline className="text-indigo-600" size={22} /> Proveedores</>}
+            </span>
+            <button
+              onClick={() => setMenuAbierto(!menuAbierto)}
+              className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              {menuAbierto ? <IoClose size={26} /> : <IoMenu size={26} />}
+            </button>
+          </div>
+
+          {/* Mobile Menu Dropdown */}
+          {menuAbierto && (
+            <div className="md:hidden flex flex-col bg-white border-b border-slate-100 animate-in slide-in-from-top-2 duration-200">
+              <button
+                onClick={() => { setTabActivo("resumen"); setMenuAbierto(false); }}
+                className={`p-4 text-left font-medium border-l-4 transition-all flex items-center gap-3 ${tabActivo === "resumen" ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-transparent text-slate-600 hover:bg-slate-50"
+                  }`}
+              >
+                <IoStatsChartOutline size={20} /> Resumen
+              </button>
+              <button
+                onClick={() => { setTabActivo("pedidos"); setMenuAbierto(false); }}
+                className={`p-4 text-left font-medium border-l-4 transition-all flex items-center gap-3 ${tabActivo === "pedidos" ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-transparent text-slate-600 hover:bg-slate-50"
+                  }`}
+              >
+                <IoListOutline size={20} /> Pedidos
+              </button>
+              <button
+                onClick={() => { setTabActivo("proveedores"); setMenuAbierto(false); }}
+                className={`p-4 text-left font-medium border-l-4 transition-all flex items-center gap-3 ${tabActivo === "proveedores" ? "border-indigo-600 bg-indigo-50 text-indigo-700" : "border-transparent text-slate-600 hover:bg-slate-50"
+                  }`}
+              >
+                <IoStorefrontOutline size={20} /> Proveedores
+              </button>
+            </div>
+          )}
+
+          {/* Desktop Tabs */}
+          <div className="hidden md:flex border-b border-slate-100 overflow-x-auto">
             <button
               onClick={() => setTabActivo("resumen")}
               className={`flex-1 py-4 px-6 text-center font-medium transition-all relative min-w-[150px] ${tabActivo === "resumen"

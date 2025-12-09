@@ -1,5 +1,6 @@
 import { IoDownloadOutline } from "react-icons/io5";
 import PedidoRow from "./PedidoRow";
+import PedidoMobileCard from "./PedidoMobileCard";
 
 export default function OrdersTable({
     pedidos,
@@ -29,7 +30,8 @@ export default function OrdersTable({
                     </button>
                 </div>
             </div>
-            <div className="overflow-x-auto">
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm text-left">
                     <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold">
                         <tr>
@@ -50,6 +52,18 @@ export default function OrdersTable({
                         ))}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-4 p-4 bg-slate-50/50">
+                {pedidos.map((p) => (
+                    <PedidoMobileCard
+                        key={p.id}
+                        pedido={p}
+                        onEstadoChange={onEstadoChange}
+                        onEliminar={onEliminar}
+                    />
+                ))}
             </div>
 
             {/* Paginación */}

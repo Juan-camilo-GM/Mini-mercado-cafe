@@ -4,7 +4,7 @@ import { IoPencil, IoTrashBin, IoSearch, IoClose } from "react-icons/io5";
 import { IoAlertCircleOutline, IoCheckmarkCircleOutline, IoCloseCircleOutline, IoTrashOutline } from "react-icons/io5";
 import toast from "react-hot-toast";
 
-const ProveedoresList = ({ proveedores, onRefresh }) => {
+export default function ProveedoresList({ proveedores, onRefresh }) {
   const [editandoProveedor, setEditandoProveedor] = useState(null);
   const [busquedaProveedor, setBusquedaProveedor] = useState("");
 
@@ -284,7 +284,8 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
       </div>
 
       {/* Tabla de proveedores */}
-      <div className="overflow-x-auto">
+      {/* Tabla de proveedores (Desktop) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-xs font-semibold">
             <tr>
@@ -324,6 +325,49 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* Lista de proveedores (Mobile) */}
+      <div className="md:hidden space-y-4 p-4 bg-slate-50/50">
+        {proveedoresPaginados.map((prov) => (
+          <div key={prov.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h4 className="font-bold text-slate-900 text-lg">{prov.nombre}</h4>
+                <p className="text-xs text-slate-500">Registrado</p>
+              </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => abrirModalEditar(prov)}
+                  className="p-2 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                >
+                  <IoPencil size={18} />
+                </button>
+                <button
+                  onClick={() => eliminarProveedor(prov.id, prov.nombre)}
+                  className="p-2 rounded-lg text-rose-600 bg-rose-50 hover:bg-rose-100 transition-colors"
+                >
+                  <IoTrashBin size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-500">Contacto</span>
+                <span className="font-medium text-slate-700">{prov.contacto || "-"}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-500">Teléfono</span>
+                <span className="font-medium text-slate-700">{prov.telefono || "-"}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-slate-500">Email</span>
+                <span className="font-medium text-slate-700 break-all ml-4 text-right">{prov.email || "-"}</span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Mensaje sin resultados */}
@@ -532,5 +576,3 @@ const ProveedoresList = ({ proveedores, onRefresh }) => {
     </div>
   );
 };
-
-export default ProveedoresList;
