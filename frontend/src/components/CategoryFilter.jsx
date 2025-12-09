@@ -20,12 +20,12 @@ export default function CategoryFilter({ categorias, filtroCategoria, setFiltroC
     }, []);
 
     return (
-        <div className="sticky top-[112px] md:top-[60px] z-40 bg-gray-50/95 backdrop-blur-xl border-b border-gray-200 transition-all duration-300 shadow-sm">
+        <div className="relative z-40 w-full bg-transparent">
             <div className="relative w-full"> {/* Removed max-w-7xl constraint to match full width request */}
 
                 {/* Gradient Fade Left */}
                 <div
-                    className={`absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white to-transparent pointer-events-none z-10 transition-opacity duration-300
+                    className={`absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-purple-700 to-transparent pointer-events-none z-10 transition-opacity duration-300
           ${showLeftFade ? 'opacity-100' : 'opacity-0'}`}
                 />
 
@@ -33,17 +33,17 @@ export default function CategoryFilter({ categorias, filtroCategoria, setFiltroC
                 <div
                     ref={scrollRef}
                     onScroll={checkScroll}
-                    className="overflow-x-auto py-4 scrollbar-hide overscroll-contain w-full"
+                    className="overflow-x-auto pt-6 pb-4 scrollbar-hide overscroll-contain w-full"
                 >
-                    <div className="flex items-center gap-3 w-fit mx-auto px-4 md:px-8">
+                    <div className="flex items-center gap-3 min-w-full px-4 md:px-8">
                         {/* Chip 'Todas' */}
                         <button
                             onClick={() => setFiltroCategoria("")}
                             className={`
-              whitespace-nowrap px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 transform active:scale-95 flex-shrink-0
+              cursor-pointer whitespace-nowrap px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 transform active:scale-95 flex-shrink-0
               ${filtroCategoria === ""
-                                    ? "bg-gray-900 text-white shadow-lg scale-100 ring-2 ring-gray-900 ring-offset-2"
-                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"}
+                                    ? "bg-white text-purple-700 shadow-lg scale-100 ring-2 ring-white ring-offset-2 ring-offset-purple-700"
+                                    : "bg-white/10 text-white hover:bg-white/20"}
             `}
                         >
                             Todas
@@ -55,10 +55,10 @@ export default function CategoryFilter({ categorias, filtroCategoria, setFiltroC
                                 key={c.id}
                                 onClick={() => setFiltroCategoria(c.id.toString())}
                                 className={`
-                whitespace-nowrap px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 transform active:scale-95 flex-shrink-0
+                cursor-pointer whitespace-nowrap px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 transform active:scale-95 flex-shrink-0
                 ${filtroCategoria === c.id.toString() || filtroCategoria === c.id
-                                        ? "bg-indigo-600 text-white shadow-lg scale-100 ring-2 ring-indigo-600 ring-offset-2"
-                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"}
+                                        ? "bg-white text-purple-700 shadow-lg scale-100 ring-2 ring-white ring-offset-2 ring-offset-purple-700"
+                                        : "bg-white/10 text-white hover:bg-white/20"}
               `}
                             >
                                 {c.nombre}
@@ -71,7 +71,7 @@ export default function CategoryFilter({ categorias, filtroCategoria, setFiltroC
 
                 {/* Gradient Fade Right */}
                 <div
-                    className={`absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white to-transparent pointer-events-none z-10 transition-opacity duration-300
+                    className={`absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-purple-800 to-transparent pointer-events-none z-10 transition-opacity duration-300
           ${showRightFade ? 'opacity-100' : 'opacity-0'}`}
                 />
             </div>

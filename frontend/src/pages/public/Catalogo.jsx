@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { createPortal } from "react-dom";
 import { obtenerProductos } from "../../lib/productos";
 import { obtenerCategorias } from "../../lib/categorias";
 import CategoryFilter from "../../components/CategoryFilter";
@@ -187,15 +188,18 @@ export default function Catalogo() {
   return (
     <div className="bg-gray-50/50 min-h-screen pb-20">
 
-      {/* Componente Nuevo de Filtros (Sticky Edge-to-Edge) */}
-      <CategoryFilter
-        categorias={categorias}
-        filtroCategoria={filtroCategoria}
-        setFiltroCategoria={setFiltroCategoria}
-      />
+      {/* Componente Nuevo de Filtros (Inyectado en el Portal del Navbar) */}
+      {document.getElementById('navbar-category-filter') && createPortal(
+        <CategoryFilter
+          categorias={categorias}
+          filtroCategoria={filtroCategoria}
+          setFiltroCategoria={setFiltroCategoria}
+        />,
+        document.getElementById('navbar-category-filter')
+      )}
 
       {/* Contenedor del Grid de Productos (Fluid Width) */}
-      <div className="w-full px-4 md:px-8 lg:px-12 pt-5">
+      <div className="w-full px-4 md:px-8 lg:px-12 pt-[140px] md:pt-[90px]">
 
         {cargando ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">

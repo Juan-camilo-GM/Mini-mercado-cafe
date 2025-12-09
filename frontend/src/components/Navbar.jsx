@@ -233,6 +233,9 @@ export default function Navbar() {
           )}
         </ul>
       </div>
+
+      {/* Portal para inyectar filtros desde otras páginas */}
+      <div id="navbar-category-filter" className="w-full"></div>
     </nav>
   );
 }
