@@ -8,7 +8,7 @@ export default function LayoutPublic() {
   return (
     <BannerTiendaCerrada>
       <Navbar />
-      <div className="pt-24 pb-12 px-4 sm:px-6 lg:px-8 min-h-[calc(100vh-300px)]">
+      <div className="pt-36 md:pt-24 pb-12 w-full min-h-[calc(100vh-300px)]">
         <Outlet />
       </div>
       <Footer />

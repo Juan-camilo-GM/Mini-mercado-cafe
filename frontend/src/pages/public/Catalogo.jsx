@@ -3,34 +3,25 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { obtenerProductos } from "../../lib/productos";
 import { obtenerCategorias } from "../../lib/categorias";
+import CategoryFilter from "../../components/CategoryFilter";
 import CarritoFlotante from "../../components/CarritoFlotante";
 import toast from "react-hot-toast";
-import { IoCheckmarkCircleOutline, IoAlertCircleOutline } from "react-icons/io5";
+import { IoCheckmarkCircleOutline, IoAlertCircleOutline, IoSearch } from "react-icons/io5";
 
 // Componente de Skeleton para tarjetas de producto
 function ProductoSkeleton() {
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden animate-pulse">
-      {/* Imagen skeleton */}
       <div className="aspect-square bg-gray-200"></div>
-
-      {/* Contenido skeleton */}
       <div className="p-3 pt-2 space-y-3">
-        {/* Categoría */}
         <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-
-        {/* Título */}
         <div className="space-y-2">
           <div className="h-4 bg-gray-200 rounded w-full"></div>
           <div className="h-4 bg-gray-200 rounded w-4/5"></div>
         </div>
-
-        {/* Precio */}
         <div className="border-t border-gray-100 pt-3 mt-3">
           <div className="h-6 bg-gray-200 rounded w-1/2"></div>
         </div>
-
-        {/* Botón */}
         <div className="h-10 bg-gray-200 rounded-xl mt-3"></div>
       </div>
     </div>
@@ -72,14 +63,12 @@ export default function Catalogo() {
     }
     cargarDatos();
 
-    // Suscripción en tiempo real a cambios en productos
     const channel = supabase
       .channel("productos_catalogo")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "productos" },
         () => {
-          // Recargar productos silenciosamente
           obtenerProductos().then(setProductos);
         }
       )
@@ -128,7 +117,6 @@ export default function Catalogo() {
       entries => {
         if (entries[0].isIntersecting && hayMasProductos && !cargandoMas && !cargando) {
           setCargandoMas(true);
-          // Simular delay de carga para mejor UX
           setTimeout(() => {
             setPaginaActual(prev => prev + 1);
             setCargandoMas(false);
@@ -153,253 +141,229 @@ export default function Catalogo() {
     const existe = carrito.find((p) => p.id === producto.id);
 
     if (existe) {
-      // Ya está en el carrito → ¿podemos sumar uno más?
       if (existe.cantidad + 1 > producto.stock) {
-        toast.error(
-          `Stock insuficiente para "${producto.nombre}"`,
-          {
-            icon: <IoAlertCircleOutline size={22} />,
-            duration: 5000,
-          }
-        );
+        toast.error(`Stock insuficiente para "${producto.nombre}"`, { icon: <IoAlertCircleOutline size={22} /> });
         return;
       }
-
-      // Sumamos uno
       setCarrito((prev) =>
         prev.map((p) =>
           p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
         )
       );
-
-      toast.success(`"${producto.nombre}" +1 agregado al carrito`, {
-        icon: <IoCheckmarkCircleOutline size={22} />,
-        duration: 3000,
-      });
+      toast.success(`"${producto.nombre}" +1 agregado al carrito`, { icon: <IoCheckmarkCircleOutline size={22} /> });
     } else {
-      // Es nuevo en el carrito
       if (producto.stock < 1) {
-        toast.error(`No hay stock disponible de "${producto.nombre}"`, {
-          icon: <IoAlertCircleOutline size={22} />,
-          duration: 5000,
-        });
+        toast.error(`No hay stock disponible de "${producto.nombre}"`, { icon: <IoAlertCircleOutline size={22} /> });
         return;
       }
-
-      // Lo agregamos con cantidad 1
       setCarrito((prev) => [...prev, { ...producto, cantidad: 1 }]);
+      toast.success(`"${producto.nombre}" agregado al carrito`, { icon: <IoCheckmarkCircleOutline size={22} /> });
+    }
+  };
 
-      toast.success(`"${producto.nombre}" agregado al carrito`, {
-        icon: <IoCheckmarkCircleOutline size={22} />,
-        duration: 3000,
-      });
+  const actualizarCantidad = (productoId, nuevaCantidad) => {
+    if (nuevaCantidad <= 0) {
+      setCarrito((prev) => prev.filter((p) => p.id !== productoId));
+      toast.success("Producto eliminado del carrito", { icon: <IoCheckmarkCircleOutline size={22} /> });
+    } else {
+      const productoEnCarrito = carrito.find((p) => p.id === productoId);
+      const productoOriginal = productos.find((p) => p.id === productoId);
+
+      if (productoEnCarrito && productoOriginal) {
+        if (nuevaCantidad > productoOriginal.stock) {
+          toast.error(`Stock insuficiente para "${productoOriginal.nombre}"`, { icon: <IoAlertCircleOutline size={22} /> });
+          return;
+        }
+        setCarrito((prev) =>
+          prev.map((p) =>
+            p.id === productoId ? { ...p, cantidad: nuevaCantidad } : p
+          )
+        );
+        toast.success(`Cantidad de "${productoOriginal.nombre}" actualizada`, { icon: <IoCheckmarkCircleOutline size={22} /> });
+      }
     }
   };
 
   return (
-    <div className="p-4 md:p-10 bg-gray-50/50  min-h-screen">
-      {/* Filtros Sticky Transparentes (Solo Chips) */}
-      <div className="sticky top-[108px] md:top-[60px] z-40 py-2 transition-all backdrop-blur-xl bg-white/30 -mx-4 sm:-mx-6 lg:-mx-8">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          {/* Fila: Chips de Categorías */}
-          <div className="flex gap-2 overflow-x-auto pb-0 scrollbar-hide">
-            <button
-              onClick={() => setFiltroCategoria("")}
-              className={`
-                whitespace-nowrap px-5 py-2 rounded-full font-medium text-sm transition-all duration-200 flex-shrink-0
-                ${filtroCategoria === ""
-                  ? "bg-gray-900 text-white shadow-lg scale-105"
-                  : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}
-              `}
-            >
-              Todas
-            </button>
-            {categorias.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setFiltroCategoria(c.id.toString())} // Convertimos a string para comparar con filtroCategoria (si es string)
-                className={`
-                  whitespace-nowrap px-5 py-2 rounded-full font-medium text-sm transition-all duration-200 flex-shrink-0
-                  ${filtroCategoria === c.id.toString() || filtroCategoria === c.id
-                    ? "bg-indigo-600 text-white shadow-md scale-105"
-                    : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}
-                `}
-              >
-                {c.nombre}
-              </button>
+    <div className="bg-gray-50/50 min-h-screen pb-20">
+
+      {/* Componente Nuevo de Filtros (Sticky Edge-to-Edge) */}
+      <CategoryFilter
+        categorias={categorias}
+        filtroCategoria={filtroCategoria}
+        setFiltroCategoria={setFiltroCategoria}
+      />
+
+      {/* Contenedor del Grid de Productos (Fluid Width) */}
+      <div className="w-full px-4 md:px-8 lg:px-12 pt-5">
+
+        {cargando ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {[...Array(12)].map((_, i) => (
+              <ProductoSkeleton key={i} />
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Contador de resultados */}
-      {!cargando && productosFiltrados.length !== productos.length && (
-        <div className="mb-4 text-sm text-gray-600">
-          Mostrando <span className="font-semibold text-indigo-600">{productosVisibles.length}</span> de{" "}
-          <span className="font-semibold">{productosFiltrados.length}</span> productos
-        </div>
-      )}
-
-      {/* Grid de productos o skeletons */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 py-6">
-        {cargando ? (
-          // Mostrar 12 skeletons mientras carga
-          Array.from({ length: 12 }).map((_, i) => (
-            <ProductoSkeleton key={i} />
-          ))
-        ) : productosFiltrados.length === 0 ? (
-          // Mensaje cuando no hay resultados
-          <div className="col-span-full text-center py-12">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-gray-500 text-lg font-medium">No se encontraron productos</p>
-            <p className="text-gray-400 text-sm mt-2">Intenta con otros términos de búsqueda</p>
-          </div>
         ) : (
-          // Mostrar productos
-          productosVisibles.map((p) => {
-            const estaAgotado = p.stock === 0;
-            const pocoStock = p.stock > 0 && p.stock <= 5;
+          <div className="flex flex-col gap-8">
+            {productosVisibles.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {productosVisibles.map((producto) => {
+                  const enCarrito = carrito.find((item) => item.id === producto.id);
+                  const cantidad = enCarrito ? enCarrito.cantidad : 0;
+                  const estaAgotado = producto.stock === 0;
+                  const pocoStock = producto.stock > 0 && producto.stock <= 5;
 
-            return (
-              <article
-                key={p.id}
-                className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-400 flex flex-col h-full
-                  ${estaAgotado
-                    ? "opacity-65 grayscale"
-                    : "shadow-xl hover:shadow-2xl hover:-translate-y-2 ring-1 ring-gray-100"
-                  }`}
-              >
-                {/* Imagen */}
-                <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 sm:aspect-square">
-                  <img
-                    src={p.imagen_url || "/placeholder.jpg"}
-                    alt={p.nombre}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    loading="lazy"
-                  />
-
-                  {/* Badge categoría */}
-                  <span className={`absolute top-3 left-3 px-3.5 py-1.5 rounded-full text-white text-xs font-bold shadow-lg z-10
-                          max-w-[100px] sm:max-w-[120px] md:max-w-[150px] lg:max-w-none truncate
-                    ${p.categoria_id === 1 ? "bg-orange-500" :
-                      p.categoria_id === 2 ? "bg-emerald-600" :
-                        p.categoria_id === 3 ? "bg-sky-600" :
-                          p.categoria_id === 4 ? "bg-amber-600" :
-                            p.categoria_id === 5 ? "bg-yellow-600" :
-                              p.categoria_id === 6 ? "bg-lime-600" :
-                                p.categoria_id === 7 ? "bg-green-600" :
-                                  p.categoria_id === 8 ? "bg-violet-600" :
-                                    p.categoria_id === 9 ? "bg-pink-600" : "bg-purple-600"}`}>
-                    {catMap[p.categoria_id] || "General"}
-                  </span>
-
-                  {/* Badge poco stock*/}
-                  {pocoStock && (
-                    <span className="absolute 
-                      bottom-3 right-1 bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse z-10
-                    ">
-                      ¡Solo Quedan {p.stock}!
-                    </span>
-                  )}
-
-                  {/* Badge agotado */}
-                  {estaAgotado && (
-                    <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
-                      <span className="bg-red-600 text-white font-black text-2xl px-8 py-3 rounded-2xl shadow-2xl">
-                        AGOTADO
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Texto y precio */}
-                <div className="p-3 pb-2 sm:p-5 sm:pb-3 flex flex-col flex-1">
-                  <h3 className="font-bold text-gray-900 text-sm sm:text-lg leading-snug sm:leading-tight line-clamp-3 min-h-[3.5rem] sm:min-h-0">
-                    {p.nombre}
-                  </h3>
-
-                  <div className="mt-auto pt-2 sm:pt-3">
-                    <span className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-700">
-                      ${parseFloat(p.precio).toLocaleString("es-AR")}
-                    </span>
-                  </div>
-                </div>
-
-                {/* BOTÓN – Compacto en móvil, grande en escritorio */}
-                {!estaAgotado ? (
-                  <div className="px-3 pb-3 sm:px-5 sm:pb-5 mt-auto">
-                    <button
-                      onClick={() => agregarAlCarrito(p)}
-                      className="
-                        w-full flex items-center justify-center gap-2 sm:gap-3 cursor-pointer
-                        bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl sm:rounded-2xl
-                        shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl active:scale-98 transition-all duration-300
-                        
-                        /* MÓVIL: estilo compacto y elegante */
-                        py-2.5 text-xs
-                        [&>svg]:w-4 [&>svg]:h-4
-                        
-                        /* Desde sm (640px): diseño premium grande */
-                        sm:py-4 sm:text-lg sm:[&>svg]:w-7 sm:[&>svg]:h-7
-                      "
+                  return (
+                    <article
+                      key={producto.id}
+                      className={`group relative bg-white rounded-2xl overflow-hidden transition-all duration-400 flex flex-col h-full
+                        ${estaAgotado
+                          ? "opacity-65 grayscale"
+                          : "shadow-xl hover:shadow-2xl hover:-translate-y-2 ring-1 ring-gray-100"
+                        }`}
                     >
-                      <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                          d="M3 3h2l.4 2M7.5 13h9l3.5-8H5.9M7.5 13L5.9 5M7.5 13l-2.3 2.3c-.6.6-.2 1.7.7 1.7H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                      </svg>
-                      <span className="hidden xxs:inline">Añadir al carrito</span>
-                      <span className="xxs:hidden">Añadir</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="px-3 pb-3 sm:px-5 sm:pb-5 mt-auto">
-                    <button
-                      disabled
-                      className="w-full py-2.5 sm:py-4 text-xs sm:text-lg font-bold bg-gray-300 text-gray-600 rounded-xl sm:rounded-2xl cursor-not-allowed"
-                    >
-                      Sin stock
-                    </button>
-                  </div>
-                )}
-              </article>
-            );
-          })
+                      {/* Imagen */}
+                      <div className="relative aspect-[4/3] bg-gradient-to-br from-gray-50 to-gray-100 sm:aspect-square">
+                        {producto.imagen_url ? (
+                          <img
+                            src={producto.imagen_url}
+                            alt={producto.nombre}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-300">
+                            <span className="text-4xl">☕</span>
+                          </div>
+                        )}
+
+                        {/* Badge categoría */}
+                        <span className={`absolute top-3 left-3 px-3.5 py-1.5 rounded-full text-white text-xs font-bold shadow-lg z-10
+                                max-w-[100px] sm:max-w-[120px] md:max-w-[150px] lg:max-w-none truncate
+                          ${producto.categoria_id === 1 ? "bg-orange-500" :
+                            producto.categoria_id === 2 ? "bg-emerald-600" :
+                              producto.categoria_id === 3 ? "bg-sky-600" :
+                                producto.categoria_id === 4 ? "bg-amber-600" :
+                                  producto.categoria_id === 5 ? "bg-yellow-600" :
+                                    producto.categoria_id === 6 ? "bg-lime-600" :
+                                      producto.categoria_id === 7 ? "bg-green-600" :
+                                        producto.categoria_id === 8 ? "bg-violet-600" :
+                                          producto.categoria_id === 9 ? "bg-pink-600" : "bg-purple-600"}`}>
+                          {catMap[producto.categoria_id] || "General"}
+                        </span>
+
+                        {pocoStock && (
+                          <span className="absolute bottom-3 right-1 bg-red-600 text-white text-xs font-black px-3 py-1.5 rounded-full shadow-xl animate-pulse z-10">
+                            ¡Solo Quedan {producto.stock}!
+                          </span>
+                        )}
+
+                        {estaAgotado && (
+                          <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
+                            <span className="bg-red-600 text-white font-black text-2xl px-8 py-3 rounded-2xl shadow-2xl">AGOTADO</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Texto y precio */}
+                      <div className="p-3 pb-2 sm:p-5 sm:pb-3 flex flex-col flex-1">
+                        <h3 className="font-bold text-gray-900 text-sm sm:text-lg leading-snug sm:leading-tight line-clamp-3 min-h-[3.5rem] sm:min-h-0">
+                          {producto.nombre}
+                        </h3>
+                        <div className="mt-auto pt-2 sm:pt-3">
+                          <span className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-indigo-700">
+                            ${parseFloat(producto.precio).toLocaleString("es-AR")}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* BOTÓN */}
+                      {!estaAgotado ? (
+                        <div className="px-3 pb-3 sm:px-5 sm:pb-5 mt-auto">
+                          {cantidad === 0 ? (
+                            <button
+                              onClick={() => agregarAlCarrito(producto)}
+                              className="w-full flex items-center justify-center gap-2 sm:gap-3 cursor-pointer
+                                bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold rounded-xl sm:rounded-2xl
+                                shadow-lg sm:shadow-xl hover:shadow-xl sm:hover:shadow-2xl active:scale-98 transition-all duration-300
+                                py-2.5 text-xs sm:py-3 sm:text-sm md:text-base"
+                            >
+                              <span className="tracking-wide">AGREGAR</span>
+                            </button>
+                          ) : (
+                            <div className="flex items-center bg-gray-100 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 shadow-inner">
+                              <button
+                                onClick={() => actualizarCantidad(producto.id, cantidad - 1)}
+                                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-white rounded-lg sm:rounded-xl shadow-sm text-purple-700 hover:bg-purple-50 transition-colors"
+                              >
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M20 12H4" />
+                                </svg>
+                              </button>
+                              <span className="flex-1 text-center font-black text-gray-800 text-sm sm:text-lg select-none">
+                                {cantidad}
+                              </span>
+                              <button
+                                onClick={() => agregarAlCarrito(producto)}
+                                className="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-purple-600 rounded-lg sm:rounded-xl shadow-lg shadow-purple-200 text-white hover:bg-purple-700 transition-transform active:scale-90"
+                              >
+                                <svg className="w-4 h-4 sm:w-5 sm:h-5 font-bold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
+                                </svg>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="px-3 pb-3 sm:px-5 sm:pb-5 mt-auto opacity-0 pointer-events-none">
+                          <div className="h-10 sm:h-12" />
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="col-span-full py-12 md:py-20 text-center">
+                <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 transform rotate-12">
+                  <IoSearch className="text-4xl text-indigo-500" />
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">No encontramos lo que buscas</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  Intenta con otra palabra clave o selecciona la categoría "Todas".
+                </p>
+                <button
+                  onClick={() => { setFiltroCategoria(""); }}
+                  className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  Ver todo el menú
+                </button>
+              </div>
+            )}
+
+            {/* Spinner Infinite Scroll */}
+            {hayMasProductos && !cargandoMas && !cargando && (
+              <div ref={observerTarget} className="h-20 flex items-center justify-center">
+                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Cargando más productos...
+                </div>
+              </div>
+            )}
+
+            {!cargando && productosVisibles.length > 0 && !hayMasProductos && productosFiltrados.length > PRODUCTOS_POR_PAGINA && (
+              <div className="text-center py-8 text-gray-500 text-sm border-t border-gray-200 mt-6">
+                ✓ Has visto todos los productos disponibles
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      {/* Loading indicator para cargar más productos */}
-      {cargandoMas && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-4 pb-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <ProductoSkeleton key={`loading-${i}`} />
-          ))}
-        </div>
-      )}
-
-      {/* Elemento observador para infinite scroll */}
-      {hayMasProductos && !cargandoMas && !cargando && (
-        <div ref={observerTarget} className="h-20 flex items-center justify-center">
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Cargando más productos...
-          </div>
-        </div>
-      )}
-
-      {/* Mensaje cuando se cargaron todos los productos */}
-      {!cargando && productosVisibles.length > 0 && !hayMasProductos && productosFiltrados.length > PRODUCTOS_POR_PAGINA && (
-        <div className="text-center py-8 text-gray-500 text-sm border-t border-gray-200 mt-6">
-          ✓ Has visto todos los productos disponibles
-        </div>
-      )}
-
-      {/* Carrito siempre activo */}
-      <CarritoFlotante carrito={carrito} setCarrito={setCarrito} />
+      <CarritoFlotante carrito={carrito} />
     </div>
   );
 }
