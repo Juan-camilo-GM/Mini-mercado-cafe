@@ -4,10 +4,9 @@ import { supabase } from "../../lib/supabase";
 import { createPortal } from "react-dom";
 import { obtenerProductos } from "../../lib/productos";
 import { obtenerCategorias } from "../../lib/categorias";
-import CategoryFilter from "../../components/CategoryFilter";
 import CarritoFlotante from "../../components/CarritoFlotante";
 import toast from "react-hot-toast";
-import { IoCheckmarkCircleOutline, IoAlertCircleOutline, IoSearch } from "react-icons/io5";
+import { IoCheckmarkCircleOutline, IoAlertCircleOutline, IoSearch, IoGrid, IoClose } from "react-icons/io5";
 
 // Componente de Skeleton para tarjetas de producto
 function ProductoSkeleton() {
@@ -33,9 +32,9 @@ export default function Catalogo() {
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [catMap, setCatMap] = useState({});
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const busqueda = searchParams.get("q") || "";
-  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const categoriaUrl = searchParams.get("categoria") || "";
   const [carrito, setCarrito] = useState([]);
   const [cargando, setCargando] = useState(true);
 
@@ -94,10 +93,10 @@ export default function Catalogo() {
   const productosFiltrados = useMemo(() => {
     return productos.filter(p => {
       const coincideTexto = p.nombre.toLowerCase().includes(busqueda.toLowerCase());
-      const coincideCategoria = filtroCategoria === "" || p.categoria_id === Number(filtroCategoria);
+      const coincideCategoria = categoriaUrl === "" || p.categoria_id === Number(categoriaUrl);
       return coincideTexto && coincideCategoria;
     });
-  }, [productos, busqueda, filtroCategoria]);
+  }, [productos, busqueda, categoriaUrl]);
 
   // Productos visibles según la página actual
   const productosVisibles = useMemo(() => {
@@ -110,7 +109,7 @@ export default function Catalogo() {
   useEffect(() => {
     setPaginaActual(1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [busqueda, filtroCategoria]);
+  }, [busqueda, categoriaUrl]);
 
   // Intersection Observer para cargar más productos automáticamente
   useEffect(() => {
@@ -188,18 +187,30 @@ export default function Catalogo() {
   return (
     <div className="bg-gray-50/50 min-h-screen pb-20">
 
-      {/* Componente Nuevo de Filtros (Inyectado en el Portal del Navbar) */}
-      {document.getElementById('navbar-category-filter') && createPortal(
-        <CategoryFilter
-          categorias={categorias}
-          filtroCategoria={filtroCategoria}
-          setFiltroCategoria={setFiltroCategoria}
-        />,
-        document.getElementById('navbar-category-filter')
+      {/* Breadcrumb / Minimalist Header */}
+      {categoriaUrl && catMap[categoriaUrl] && (
+        <div className="pt-2 md:pt-0 px-4 md:px-8 lg:px-12 pb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span>Catálogo</span>
+            <span className="text-gray-300">/</span>
+            <span className="font-bold text-gray-900">{catMap[categoriaUrl]}</span>
+
+            <button
+              onClick={() => {
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete("categoria");
+                setSearchParams(newParams);
+              }}
+              className="ml-2 text-red-500 hover:text-red-700 text-xs font-medium hover:underline flex items-center gap-1"
+            >
+              (Limpiar)
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Contenedor del Grid de Productos (Fluid Width) */}
-      <div className="w-full px-4 md:px-8 lg:px-12 pt-24 sm:pt-32 md:pt-[90px]">
+      <div className={`w-full px-4 md:px-8 lg:px-12 ${categoriaUrl ? 'pt-4' : 'pt-10 sm:pt-24 md:pt-[80px]'}`}>
 
         {cargando ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -337,7 +348,11 @@ export default function Catalogo() {
                   Intenta con otra palabra clave o selecciona la categoría "Todas".
                 </p>
                 <button
-                  onClick={() => { setFiltroCategoria(""); }}
+                  onClick={() => {
+                    const newParams = new URLSearchParams(searchParams);
+                    newParams.delete("categoria");
+                    setSearchParams(newParams);
+                  }}
                   className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors"
                 >
                   Ver todo el menú

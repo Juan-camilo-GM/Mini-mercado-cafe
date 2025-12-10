@@ -1,17 +1,22 @@
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { IoMenu, IoClose, IoLogOut, IoCart, IoGrid, IoTime, IoSearch } from "react-icons/io5";
+import { IoMenu, IoClose, IoLogOut, IoCart, IoGrid, IoTime, IoSearch, IoChevronDown, IoChevronForward } from "react-icons/io5";
+import { obtenerCategorias } from "../lib/categorias";
 import BotonCerrarTienda from "../pages/admin/BotonCerrarTienda";
 
 export default function Navbar() {
-  const [open, setOpen] = useState(false);
   const [isAdminLogged, setIsAdminLogged] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const currentCategory = searchParams.get("categoria");
   const [busqueda, setBusqueda] = useState("");
+  const [categorias, setCategorias] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State for Sidebar
+
+
 
   // Sincronizar input con URL (Solo si la URL cambia externamente)
   useEffect(() => {
@@ -61,6 +66,9 @@ export default function Navbar() {
       setIsAdminLogged(!!data);
     };
     checkAdmin();
+
+    // Cargar categorías
+    obtenerCategorias().then(setCategorias);
   }, [pathname]);
 
   // VISTA PÚBLICA
@@ -81,7 +89,7 @@ export default function Navbar() {
   const showSearch = !isAdminRoute && pathname !== "/admin/login";
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 shadow-2xl transition-all duration-300 ${scrolled ? 'py-2' : 'py-3 sm:py-4'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-700 via-indigo-600 to-purple-800 shadow-2xl transition-all duration-300 ${scrolled ? 'py-4' : 'py-4 sm:py-6'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3">
 
@@ -125,6 +133,23 @@ export default function Navbar() {
             <ul className="hidden lg:flex items-center gap-1">
               {links.map((link) => {
                 const isActive = pathname === link.to;
+
+                // Special rendering for 'Catálogo' to include Dropdown
+                if (link.label === "Catálogo") {
+                  return (
+                    <li key={link.to}>
+                      <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200
+                                ${isActive || isSidebarOpen ? "bg-white/20 text-white shadow-lg border border-white/20" : "text-indigo-100 hover:bg-white/10 hover:text-white"}`}
+                      >
+                        {link.icon}
+                        <span>{link.label}</span>
+                      </button>
+                    </li>
+                  );
+                }
+
                 return (
                   <li key={link.to}>
                     <Link
@@ -161,12 +186,12 @@ export default function Navbar() {
               )}
             </ul>
 
-            {/* BOTÓN MÓVIL */}
+            {/* BOTÓN MÓVIL (Hamburguesa) */}
             <button
-              onClick={() => setOpen(!open)}
+              onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-2 rounded-lg text-white hover:bg-white/10 transition-colors"
             >
-              {open ? <IoClose className="text-2xl" /> : <IoMenu className="text-2xl" />}
+              <IoMenu className="text-3xl" />
             </button>
           </div>
 
@@ -189,53 +214,84 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* MENÚ MÓVIL DESPLEGABLE (Ajustado para no tapar contenido si es muy alto) */}
-      <div className={`lg:hidden absolute top-full left-0 right-0 bg-indigo-900/95 backdrop-blur-xl border-t border-white/10 transition-all duration-300 overflow-hidden shadow-2xl ${open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-        }`}>
-        <ul className="px-4 py-6 space-y-2">
-          {links.map((link) => {
-            const isActive = pathname === link.to;
-            return (
-              <li key={link.to}>
+      {/* SIDEBAR DRAWER */}
+      {/* Overlay */}
+      <div
+        className={`fixed inset-0 bg-black/60 backdrop-blur-md z-[60] transition-opacity duration-500 ease-in-out ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+
+      {/* Sidebar Panel */}
+      <div className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-b from-purple-800 via-indigo-700 to-purple-900 shadow-3xl z-[70] transform transition-transform duration-500 cubic-bezier(0.25, 1, 0.5, 1) flex flex-col border-r border-white/10
+          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+
+        {/* Header */}
+        <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
+          <h2 className="text-2xl font-black text-white tracking-tight">Cátalogo</h2>
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white"
+          >
+            <IoClose className="text-3xl" />
+          </button>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto py-6 px-4 space-y-6 scrollbar-hide">
+          {/* Main Navigation */}
+          {isAdminRoute && (
+            <nav className="space-y-2 pb-6 border-b border-white/10">
+              {links.filter(l => l.label !== "Catálogo").map(link => (
                 <Link
+                  key={link.to}
                   to={link.to}
-                  onClick={() => setOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all
-                    ${isActive
-                      ? "bg-white/20 text-white"
-                      : "text-indigo-100 hover:bg-white/10 hover:text-white"
-                    }`}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="flex items-center gap-4 px-4 py-3 text-white hover:bg-white/10 rounded-xl font-bold transition-all text-lg"
                 >
                   {link.icon}
                   {link.label}
                 </Link>
-              </li>
-            );
-          })}
+              ))}
 
-          {isAdminRoute && (
-            <>
-              <li className="pt-4 border-t border-white/10 mt-4">
-                <div className="px-2 mb-4">
-                  <BotonCerrarTienda />
-                </div>
-              </li>
-              <li>
-                <button
-                  onClick={() => { supabase.auth.signOut(); setOpen(false); }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-rose-500/20 text-rose-200 hover:bg-rose-500 hover:text-white font-medium transition-all"
-                >
-                  <IoLogOut className="text-xl" />
-                  Cerrar Sesión
-                </button>
-              </li>
-            </>
+              <button
+                onClick={() => { supabase.auth.signOut(); setIsSidebarOpen(false); }}
+                className="w-full flex items-center gap-4 px-4 py-3 text-rose-200 hover:bg-rose-500/20 rounded-xl font-bold transition-all text-lg"
+              >
+                <IoLogOut className="text-xl" />
+                Cerrar Sesión
+              </button>
+            </nav>
           )}
-        </ul>
-      </div>
 
-      {/* Portal para inyectar filtros desde otras páginas */}
-      <div id="navbar-category-filter" className="w-full"></div>
+          {/* Categories Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between px-4 mb-2">
+              <span className="text-white/50 text-xs font-bold uppercase tracking-widest">Explorar</span>
+              <Link to="/catalogo" onClick={() => setIsSidebarOpen(false)} className="text-xs text-white/80 hover:text-white underline">Ver todo</Link>
+            </div>
+
+            <div className="grid gap-1">
+              {categorias.map(cat => {
+                const isActive = currentCategory === cat.id.toString();
+                return (
+                  <Link
+                    key={cat.id}
+                    to={`/catalogo?categoria=${cat.id}`}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={`flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all border border-transparent
+                                    ${isActive
+                        ? 'bg-white text-purple-700 shadow-xl border-white scale-[1.02]'
+                        : 'text-indigo-100 hover:bg-white/10 hover:ml-2'}`}
+                  >
+                    {cat.nombre}
+                    {isActive && <IoChevronForward />}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }
