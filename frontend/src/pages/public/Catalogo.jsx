@@ -201,7 +201,7 @@ export default function Catalogo() {
                 newParams.delete("categoria");
                 setSearchParams(newParams);
               }}
-              className="ml-2 text-red-500 hover:text-red-700 text-xs font-medium hover:underline flex items-center gap-1"
+              className="ml-2 text-red-500 hover:text-red-700 text-xs font-medium hover:underline flex items-center gap-1 cursor-pointer"
             >
               (Limpiar)
             </button>
