@@ -232,12 +232,12 @@ export default function Navbar() {
 
         {/* Header */}
         <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/5">
-          <h2 className="text-2xl font-black text-white tracking-tight">Cátalogo</h2>
+          <h2 className="text-2xl font-black text-white tracking-tight">Menú</h2>
           <button
             onClick={() => setIsSidebarOpen(false)}
             className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/80 hover:text-white"
           >
-            <IoClose className="text-3xl" />
+            <IoClose className="text-2xl" />
           </button>
         </div>
 
