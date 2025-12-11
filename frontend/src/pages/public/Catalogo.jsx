@@ -345,12 +345,13 @@ export default function Catalogo() {
                 </div>
                 <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">No encontramos lo que buscas</h3>
                 <p className="text-gray-500 max-w-md mx-auto">
-                  Intenta con otra palabra clave o selecciona la categoría "Todas".
+                  Intenta con otra palabra clave o selecciona la categoría "Ver todo".
                 </p>
                 <button
                   onClick={() => {
                     const newParams = new URLSearchParams(searchParams);
                     newParams.delete("categoria");
+                    newParams.delete("q");
                     setSearchParams(newParams);
                   }}
                   className="mt-6 px-6 py-2 bg-indigo-600 text-white rounded-full font-medium hover:bg-indigo-700 transition-colors cursor-pointer"
