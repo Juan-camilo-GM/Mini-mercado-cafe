@@ -59,7 +59,7 @@ export default function Footer() {
                             </li>
                             <li className="flex items-center gap-3">
                                 <IoCall className="text-indigo-500 text-lg shrink-0" />
-                                <span>+57 300 123 4567</span>
+                                <span>+57 3218937440</span>
                             </li>
                             <li className="flex items-center gap-3">
                                 <IoMail className="text-indigo-500 text-lg shrink-0" />
