@@ -215,7 +215,7 @@ export default function Catalogo() {
       <div id="catalogo" className={`w-full px-4 md:px-8 lg:px-12 ${categoriaUrl ? 'pt-4' : 'pt-4'}`}>
 
         {/* Banner de Ofertas (Solo si no hay categoría seleccionada ni búsqueda y no está cargando) */}
-        {!cargando && !categoriaUrl && !busqueda && (
+        {!cargando && !categoriaUrl && !busqueda && productos.some(p => p.is_featured) && (
           <div className="-mt-16 md:-mt-20 mb-8">
             <BannerOfertas productos={productos} agregarAlCarrito={agregarAlCarrito} />
           </div>

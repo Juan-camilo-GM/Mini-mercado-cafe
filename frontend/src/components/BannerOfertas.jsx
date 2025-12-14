@@ -34,7 +34,7 @@ export default function BannerOfertas({ productos, agregarAlCarrito }) {
                 {/* === DECORACIÓN DE FONDO (Sutil) === */}
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
-                <div className="flex flex-row items-center p-4 md:p-6 min-h-[140px] md:min-h-[180px]">
+                <div className="flex flex-row items-center p-4 md:py-8 md:px-16 min-h-[140px] md:min-h-[180px]">
 
                     {/* === IMAGEN (Izquierda) === */}
                     <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-48 md:h-48 flex-shrink-0 mr-4 md:mr-8 perspective-1000">
@@ -57,28 +57,32 @@ export default function BannerOfertas({ productos, agregarAlCarrito }) {
                     </div>
 
                     {/* === CONTENIDO (Derecha) === */}
-                    <div className="flex-1 flex flex-col justify-center min-w-0">
+                    <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between min-w-0 gap-2 md:gap-8">
 
-                        <h2 className="text-lg sm:text-2xl md:text-3xl font-black leading-tight mb-1 truncate text-white drop-shadow-sm">
-                            {productoActual.nombre}
-                        </h2>
+                        {/* Texto */}
+                        <div className="flex flex-col justify-center flex-1 min-w-0">
+                            <h2 className="text-lg sm:text-2xl md:text-3xl font-black leading-tight mb-1 text-white drop-shadow-sm line-clamp-2 md:line-clamp-2">
+                                {productoActual.nombre}
+                            </h2>
 
-                        <p className="text-indigo-50 text-xs sm:text-sm md:text-base font-medium line-clamp-2 md:line-clamp-2 mb-3 leading-snug opacity-90">
-                            ¡Sabor único y especial! Disponible para entrega inmediata aquí en el conjunto.
-                        </p>
+                            <p className="text-indigo-50 text-xs sm:text-sm md:text-base font-medium line-clamp-2 mb-2 leading-snug opacity-90">
+                                ¡Sabor único y especial! Disponible para entrega inmediata.
+                            </p>
+                        </div>
 
-                        <div className="flex items-center gap-2 md:gap-4 mt-auto">
+                        {/* Botón y Acciones */}
+                        <div className="flex items-center gap-3 flex-shrink-0 md:self-center">
                             <button
                                 onClick={() => agregarAlCarrito(productoActual)}
-                                className="flex-1 sm:flex-none px-4 py-2 bg-white text-indigo-700 font-bold rounded-lg shadow-sm active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-1.5 hover:bg-gray-50"
+                                className="flex-1 sm:flex-none px-5 py-2.5 bg-white text-indigo-700 font-bold rounded-lg shadow-sm active:scale-95 transition-all text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-gray-50 cursor-pointer whitespace-nowrap"
                             >
                                 <IoCart className="text-base md:text-lg" />
-                                <span>Add ${parseFloat(productoActual.precio).toLocaleString("es-CO")}</span>
+                                <span>AGREGAR ${parseFloat(productoActual.precio).toLocaleString("es-CO")}</span>
                             </button>
 
-                            {/* Paginación pequeña */}
+                            {/* Paginación pequeña (visible desktop) */}
                             {ofertas.length > 1 && (
-                                <div className="hidden sm:flex items-center gap-1.5 bg-black/10 px-2 py-1 rounded-full">
+                                <div className="hidden md:flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-full">
                                     {ofertas.map((_, idx) => (
                                         <div
                                             key={idx}
