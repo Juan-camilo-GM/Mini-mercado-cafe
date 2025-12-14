@@ -140,6 +140,11 @@ export default function Catalogo() {
   }, [hayMasProductos, cargandoMas, cargando]);
 
   const agregarAlCarrito = (producto) => {
+    // Haptic Feedback (Vibración táctil) para móviles
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(50);
+    }
+
     const existe = carrito.find((p) => p.id === producto.id);
 
     if (existe) {
