@@ -151,8 +151,12 @@ export default function RegistrarVenta() {
     // Cálculo de Envío con lógica de umbral
     const costoEnvio = useMemo(() => {
         if (tipoEntrega !== "domicilio") return 0;
-        if (minimoGratisConfig > 0 && total >= minimoGratisConfig) return 0;
-        return costoEnvioConfig;
+
+        const configCosto = Number(costoEnvioConfig);
+        const minimo = Number(minimoGratisConfig);
+
+        if (minimo > 0 && total >= minimo) return 0;
+        return configCosto;
     }, [tipoEntrega, total, costoEnvioConfig, minimoGratisConfig]);
     const totalFinal = total + costoEnvio;
     const cambio = (pagaCon && metodoPago === "efectivo") ? (Number(pagaCon) - totalFinal) : 0;
