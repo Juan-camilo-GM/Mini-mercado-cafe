@@ -191,10 +191,8 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                 </div>
 
                 <div>
-                  <p className="font-bold text-lg">¡Pedido registrado con éxito!</p>
-                  <p className="text-sm opacity-95 mt-1">
-                    Redirigiendo a WhatsApp...
-                  </p>
+                  <p className="font-bold text-lg">Pedido Registrado</p>
+                  <p className="text-sm opacity-95 mt-1">Recuerda enviar el mensaje por WhatsApp para confirmar y hacer válida la compra.</p>
                 </div>
               </div>
 
@@ -208,7 +206,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
             </div>
           </div>
         ),
-        { duration: 3000 }
+        { duration: Infinity }
       );
 
       // Intentar abrir en ventana nueva; si popup bloqueado o en móvil, hacer fallback a location.href
