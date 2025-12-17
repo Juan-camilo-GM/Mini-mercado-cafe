@@ -76,18 +76,13 @@ export async function eliminarProducto(id) {
 export const agregarPedido = async (pedido) => {
   const { data, error } = await supabase
     .from("pedidos")
-    .insert([pedido])
-    .select()
-    .single();
-
+    .insert([pedido]);
   if (error) {
     console.error("Error al agregar pedido:", error);
     return null;
   }
-
-  return data; // devolver la fila insertada
+  return true; // indicar éxito aunque no se retorne la fila (evita problemas con RLS al pedir representación)
 };
-
 
 // Obtener pedidos
 export async function obtenerPedidos() {
