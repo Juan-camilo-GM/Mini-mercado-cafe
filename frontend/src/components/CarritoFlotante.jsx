@@ -203,11 +203,22 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
         { duration: 3000 }
       );
 
-      // Usar location.href en lugar de window.open para evitar bloqueadores de popup en móvil
+      // Intentar abrir en ventana nueva; si popup bloqueado o en móvil, hacer fallback a location.href
       const whatsappUrl = `https://wa.me/${TU_NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
-      setTimeout(() => {
-        window.location.href = whatsappUrl;
-      }, 500);
+      const openWhatsapp = () => {
+        try {
+          const newWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+          if (!newWindow) {
+            // Popup bloqueado — navegar en la misma pestaña
+            window.location.href = whatsappUrl;
+          }
+        } catch (err) {
+          window.location.href = whatsappUrl;
+        }
+      };
+
+      // Abrir tras breve delay para dejar mostrar el toast
+      setTimeout(openWhatsapp, 500);
 
     } catch (err) {
       console.error("Error completo:", err);
