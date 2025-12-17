@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { supabase } from "../../lib/supabase";
 import { obtenerProductos } from "../../lib/productos";
 import { obtenerCategorias } from "../../lib/categorias";
-import { obtenerConfiguracion, guardarConfiguracion } from "../../lib/config";
+import { obtenerConfiguracion, guardarConfiguracion, subscribeConfiguracion } from "../../lib/config";
 import toast from "react-hot-toast";
 import {
     IoSearch,
@@ -107,6 +107,20 @@ export default function RegistrarVenta() {
             if (valMinimo !== null) setMinimoGratisConfig(Number(valMinimo));
         }
         cargarConfig();
+        // Suscribirse a cambios en tiempo real para mantener los valores sincronizados
+        const unsubCosto = subscribeConfiguracion("costo_envio", (v) => {
+            const n = Number(v);
+            if (!isNaN(n)) setCostoEnvioConfig(n);
+        });
+        const unsubMin = subscribeConfiguracion("envio_gratis_minimo", (v) => {
+            const n = Number(v);
+            if (!isNaN(n)) setMinimoGratisConfig(n);
+        });
+
+        return () => {
+            try { unsubCosto(); } catch (e) {}
+            try { unsubMin(); } catch (e) {}
+        };
     }, []);
 
 

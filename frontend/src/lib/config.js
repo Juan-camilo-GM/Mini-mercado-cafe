@@ -39,3 +39,26 @@ export const guardarConfiguracion = async (clave, valor) => {
         return null;
     }
 };
+
+// Suscribe en tiempo real a cambios en la tabla `configuracion`.
+// Devuelve una función para cancelar la suscripción.
+export const subscribeConfiguracion = (clave, callback) => {
+    const channel = supabase
+        .channel(`configuracion_${clave}`)
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'configuracion' },
+            (payload) => {
+                try {
+                    const nue = payload.new;
+                    if (!nue) return;
+                    if (nue.clave === clave) callback(nue.valor);
+                } catch (err) {
+                    console.error('Error en handler realtime configuracion', err);
+                }
+            }
+        )
+        .subscribe();
+
+    return () => supabase.removeChannel(channel);
+};
