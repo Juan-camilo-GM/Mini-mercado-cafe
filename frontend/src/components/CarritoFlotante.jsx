@@ -215,12 +215,18 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
       const whatsappUrl = `https://wa.me/${TU_NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
       const openWhatsapp = () => {
         try {
-          const newWindow = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-          if (!newWindow) {
-            // Popup bloqueado — navegar en la misma pestaña
-            window.location.href = whatsappUrl;
-          }
+          // Crear un anchor temporal para abrir en nueva pestaña sin afectar la actual
+          const a = document.createElement('a');
+          a.href = whatsappUrl;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          // Algunos navegadores requieren que el anchor esté en el DOM
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
         } catch (err) {
+          // Fallback a navegación en la misma pestaña
           window.location.href = whatsappUrl;
         }
       };
