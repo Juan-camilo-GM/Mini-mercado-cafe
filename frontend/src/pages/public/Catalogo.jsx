@@ -167,7 +167,7 @@ export default function Catalogo() {
 
     if (existe) {
       if (existe.cantidad + 1 > producto.stock) {
-        toast.error(`Stock insuficiente para "${producto.nombre}"`, { icon: <IoAlertCircleOutline size={22} /> });
+        toast.error(`Stock insuficiente para "${producto.nombre}"`, { icon: <IoAlertCircleOutline size={22} />, duration: 4000 });
         return;
       }
       setCarrito((prev) =>
@@ -175,28 +175,28 @@ export default function Catalogo() {
           p.id === producto.id ? { ...p, cantidad: p.cantidad + 1 } : p
         )
       );
-      toast.success(`"${producto.nombre}" +1 agregado al carrito`);
+      toast.success(`"${producto.nombre}" +1 agregado al carrito`, { duration: 3000 });
     } else {
       if (producto.stock < 1) {
-        toast.error(`No hay stock disponible de "${producto.nombre}"`, { icon: <IoAlertCircleOutline size={22} /> });
+        toast.error(`No hay stock disponible de "${producto.nombre}"`, { icon: <IoAlertCircleOutline size={22} />, duration: 4000 });
         return;
       }
       setCarrito((prev) => [...prev, { ...producto, cantidad: 1 }]);
-      toast.success(`"${producto.nombre}" agregado al carrito`);
+      toast.success(`"${producto.nombre}" agregado al carrito`, { duration: 3000 });
     }
   };
 
   const actualizarCantidad = (productoId, nuevaCantidad) => {
     if (nuevaCantidad <= 0) {
       setCarrito((prev) => prev.filter((p) => p.id !== productoId));
-      toast.success("Producto eliminado del carrito");
+      toast.success("Producto eliminado del carrito", { duration: 3000 });
     } else {
       const productoEnCarrito = carrito.find((p) => p.id === productoId);
       const productoOriginal = productos.find((p) => p.id === productoId);
 
       if (productoEnCarrito && productoOriginal) {
         if (nuevaCantidad > productoOriginal.stock) {
-          toast.error(`Stock insuficiente para "${productoOriginal.nombre}"`, { icon: <IoAlertCircleOutline size={22} /> });
+          toast.error(`Stock insuficiente para "${productoOriginal.nombre}"`, { icon: <IoAlertCircleOutline size={22} />, duration: 4000 });
           return;
         }
         setCarrito((prev) =>
@@ -204,7 +204,7 @@ export default function Catalogo() {
             p.id === productoId ? { ...p, cantidad: nuevaCantidad } : p
           )
         );
-        toast.success(`Cantidad de "${productoOriginal.nombre}" actualizada`);
+        toast.success(`Cantidad de "${productoOriginal.nombre}" actualizada`, { duration: 3000 });
       }
     }
   };
