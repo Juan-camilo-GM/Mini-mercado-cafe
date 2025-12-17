@@ -321,7 +321,7 @@ export default function RegistrarVenta() {
                 <header className="bg-white px-4 py-4 md:px-6 md:py-5 border-b border-slate-200 shadow-sm z-10 shrink-0">
                     <div className="flex flex-col gap-4 max-w-7xl mx-auto w-full">
                         {/* Título y Configuración */}
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center pt-2">
                             <div>
                                 <h1 className="text-xl md:text-2xl font-bold text-slate-900 flex items-center gap-2">
                                     <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600">
@@ -336,7 +336,7 @@ export default function RegistrarVenta() {
                                 title="Configuración de Envío"
                             >
                                 <IoSettingsOutline size={20} />
-                                <span className="hidden md:inline">Configuración</span>
+                                <span className="hidden md:inline">$ Domicilio</span>
                             </button>
                         </div>
 
