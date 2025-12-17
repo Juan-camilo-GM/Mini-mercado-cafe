@@ -483,7 +483,7 @@ export default function Productos() {
                         />
                         <button
                           onClick={() => { setImagenFile(null); setFormProducto(p => ({ ...p, imagen_url: null })) }}
-                          className="absolute top-2 right-2 bg-white text-rose-500 p-2 rounded-full shadow-md hover:bg-rose-50 transition"
+                          className="absolute top-2 right-2 z-20 bg-white text-rose-500 p-2 rounded-full shadow-md hover:bg-rose-50 transition"
                         >
                           <IoTrashBin />
                         </button>
@@ -499,7 +499,7 @@ export default function Productos() {
                       type="file"
                       accept="image/*"
                       onChange={(e) => setImagenFile(e.target.files?.[0])}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
+                      className={`absolute inset-0 opacity-0 cursor-pointer ${ (imagenFile || formProducto.imagen_url) ? 'pointer-events-none' : '' }`}
                       disabled={!!(imagenFile || formProducto.imagen_url)}
                     />
                   </div>
