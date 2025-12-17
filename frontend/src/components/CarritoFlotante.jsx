@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { IoCart, IoTrashBin, IoClose, IoCash, IoCloudUpload } from "react-icons/io5";
 import { agregarPedido } from "../lib/productos";
-import { obtenerConfiguracion } from "../lib/config";
+import { obtenerConfiguracion, subscribeConfiguracion } from "../lib/config";
 import toast from "react-hot-toast";
 
 export default function CarritoFlotante({ carrito, setCarrito }) {
@@ -32,13 +32,37 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
   const totalFinal = total + costoEnvio;
 
   useEffect(() => {
+    let isMounted = true;
     async function cargarConfig() {
       const valEnvio = await obtenerConfiguracion("costo_envio");
       const valMinimo = await obtenerConfiguracion("envio_gratis_minimo");
+      if (!isMounted) return;
       if (valEnvio !== null) setCostoEnvioConfig(Number(valEnvio));
       if (valMinimo !== null) setMinimoGratisConfig(Number(valMinimo));
     }
     cargarConfig();
+
+    const unsubEnvio = subscribeConfiguracion("costo_envio", (val) => {
+      try {
+        if (val !== null) setCostoEnvioConfig(Number(val));
+      } catch (err) {
+        console.error('Error al actualizar costo_envio realtime', err);
+      }
+    });
+
+    const unsubMinimo = subscribeConfiguracion("envio_gratis_minimo", (val) => {
+      try {
+        if (val !== null) setMinimoGratisConfig(Number(val));
+      } catch (err) {
+        console.error('Error al actualizar envio_gratis_minimo realtime', err);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      if (typeof unsubEnvio === 'function') unsubEnvio();
+      if (typeof unsubMinimo === 'function') unsubMinimo();
+    };
   }, []);
 
   useEffect(() => {
