@@ -183,7 +183,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                 <div>
                   <p className="font-bold text-lg">¡Pedido registrado con éxito!</p>
                   <p className="text-sm opacity-95 mt-1">
-                    Recuerda enviar el mensaje por WhatsApp para validar y confirmar tu compra.
+                    Redirigiendo a WhatsApp...
                   </p>
                 </div>
               </div>
@@ -198,14 +198,17 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
             </div>
           </div>
         ),
-        { duration: Infinity } // ← Nunca se va solo
+        { duration: 3000 }
       );
 
-      // Abrir WhatsApp
-      window.open(`https://wa.me/${TU_NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`, "_blank");
-
+      // Usar location.href en lugar de window.open para evitar bloqueadores de popup en móvil
+      const whatsappUrl = `https://wa.me/${TU_NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+      setTimeout(() => {
+        window.location.href = whatsappUrl;
+      }, 500);
 
     } catch (err) {
+      console.error("Error completo:", err);
       toast.error("Error al procesar el pedido");
     }
   };
