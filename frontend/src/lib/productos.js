@@ -81,7 +81,6 @@ export const agregarPedido = async (pedido) => {
     console.error("Error al agregar pedido:", error);
     return null;
   }
-  return data[0]; // devuelve el pedido recién creado
 };
 
 // Obtener pedidos
