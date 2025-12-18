@@ -22,7 +22,7 @@ export default function Footer() {
                             <a href="#" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300">
                                 <IoLogoFacebook size={20} />
                             </a>
-                            <a href="https://wa.me/3218937440" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all duration-300">
+                            <a href="https://wa.me/573218937440" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all duration-300">
                                 <IoLogoWhatsapp size={20} />
                             </a>
                         </div>

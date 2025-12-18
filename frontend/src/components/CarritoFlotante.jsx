@@ -11,12 +11,13 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
   const [alertaCheckout, setAlertaCheckout] = useState("");
 
   const [cliente, setCliente] = useState({ nombre: "", direccion: "" });
-  const [entrega, setEntrega] = useState("recoger");
+  const [entrega, setEntrega] = useState("domicilio");
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [costoEnvioConfig, setCostoEnvioConfig] = useState(2000); // Valor por defecto visual
   const [minimoGratisConfig, setMinimoGratisConfig] = useState(0);
   const [pago, setPago] = useState("efectivo");
   const [cambio, setCambio] = useState("");
+  const modalRef = useRef(null);
 
   // TUS DATOS REALES (cambia estos valores)
   const NEQUI_NUMERO = "3154186754";
@@ -118,8 +119,8 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
   };
 
   const confirmarPedido = async () => {
-    if (!cliente.nombre.trim()) return setAlertaCheckout("Ingresa tu nombre");
-    if (entrega === "domicilio" && !cliente.direccion.trim()) return setAlertaCheckout("Ingresa la dirección");
+    if (!cliente.nombre.trim()) { setAlertaCheckout("Ingresa tu nombre"); modalRef.current.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if (entrega === "domicilio" && !cliente.direccion.trim()) { setAlertaCheckout("Ingresa la dirección"); modalRef.current.scrollTo({ top: 0, behavior: 'smooth' }); return; }
 
     // Validar carrito antes de crear el pedido
     const carritoLimpio = carrito
@@ -350,7 +351,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
       {/* MODAL CHECKOUT */}
       {checkoutOpen && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-70 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
+          <div ref={modalRef} className="bg-white rounded-3xl shadow-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
             {/* Header */}
             <div className="bg-gradient-to-br from-emerald-600 to-green-700 text-white p-6 text-center relative">
               <h2 className="text-2xl font-bold">Confirmar Pedido</h2>
