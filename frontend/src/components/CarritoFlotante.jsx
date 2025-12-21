@@ -196,8 +196,8 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
     ${carrito.map(p => `• ${p.nombre} × ${p.cantidad} → $${(p.precio * p.cantidad).toLocaleString("es-CO")}`).join("\n")}
 
     *Subtotal:* $${total.toLocaleString("es-CO")}
-    ${entrega === "domicilio" && costoEnvio === 0 && minimoGratisConfig > 0 ? "🎉 *¡Envío Gratis Aplicado!*\n" : ""}
-    ${entrega === "domicilio" && costoEnvio > 0 && costoEnvio < costoEnvioConfig ? "🎉 *¡Envío con Descuento!*\n" : ""}
+    ${entrega === "domicilio" && costoEnvio === 0 && minimoGratisConfig > 0 ? "*¡Envío Gratis Aplicado!*\n" : ""}
+    ${entrega === "domicilio" && costoEnvio > 0 && costoEnvio < costoEnvioConfig ? "*¡Envío con tarifa reducida aplicado!*\n" : ""}
     ${costoEnvio > 0 ? `*Envío:* $${costoEnvio.toLocaleString("es-CO")}\n` : ""}*TOTAL A PAGAR:* *$${totalFinal.toLocaleString("es-CO")}*
 
     ${pago === "efectivo"
@@ -413,22 +413,26 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                         <div className="w-6 h-6 rounded-full border-2 border-emerald-600 flex items-center justify-center">
                           {entrega === "domicilio" && <div className="w-3 h-3 bg-emerald-600 rounded-full" />}
                         </div>
-                        <div>
-                          <p className="font-bold text-emerald-700">Envío a domicilio</p>
+                        <div className="flex-1">
+                          <p className="font-bold text-emerald-700">
+                            Envío a domicilio
+                            <b className="ml-2 text-emerald-600">
+                              {costoEnvio === 0 && minimoGratisConfig > 0 && total >= minimoGratisConfig
+                                ? "Gratis"
+                                : `$${Number(costoEnvio).toLocaleString("es-CO")}`
+                              }
+                            </b>
+                          </p>
                           <p className="text-sm text-gray-600">
-                            {costoEnvio === 0 && minimoGratisConfig > 0 && total >= minimoGratisConfig ? (
-                              <span className="text-emerald-600 font-bold">¡Gratis!</span>
+                            {total >= minimoGratisConfig && minimoGratisConfig > 0 && costoEnvio < costoEnvioConfig && costoEnvio > 0 ? (
+                              <span className="text-emerald-600 font-medium">Tarifa reducida por compra superior a ${Number(minimoGratisConfig).toLocaleString("es-CO")}</span>
                             ) : (
-                              total >= minimoGratisConfig && minimoGratisConfig > 0 && costoEnvio < costoEnvioConfig ? (
-                                <span className="text-emerald-600 font-bold">¡Con descuento! ${Number(costoEnvio).toLocaleString("es-CO")}</span>
-                              ) : (
-                                `Te lo llevamos donde estés • +$${Number(costoEnvioConfig).toLocaleString("es-CO")}`
-                              )
+                              "Te lo llevamos donde estés"
                             )}
                           </p>
                           {minimoGratisConfig > 0 && total < minimoGratisConfig && (
                             <p className="text-xs text-indigo-500 mt-1">
-                              ¡Descuento en envío por compras desde ${Number(minimoGratisConfig).toLocaleString("es-CO")}!
+                              Se reduce el costo del envío por compras superiores a ${Number(minimoGratisConfig).toLocaleString("es-CO")}
                             </p>
                           )}
                         </div>
@@ -558,9 +562,9 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                   <div className="space-y-1 mt-2">
                     <p className="text-sm text-center text-gray-600">
                       {costoEnvio === 0 && minimoGratisConfig > 0 && total >= minimoGratisConfig
-                        ? "¡Envío gratis aplicado!"
+                        ? "Envío gratis aplicado"
                         : total >= minimoGratisConfig && minimoGratisConfig > 0 && costoEnvio < costoEnvioConfig
-                          ? "¡Descuento en envío aplicado!"
+                          ? "Envío con tarifa reducida aplicado"
                           : "Incluye envío a domicilio"}
                     </p>
                   </div>
