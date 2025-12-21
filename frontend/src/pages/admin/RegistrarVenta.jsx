@@ -74,6 +74,7 @@ export default function RegistrarVenta() {
     // Configuración de Envío
     const [costoEnvioConfig, setCostoEnvioConfig] = useState(2000);
     const [minimoGratisConfig, setMinimoGratisConfig] = useState(0);
+    const [costoEnvioReducidoConfig, setCostoEnvioReducidoConfig] = useState(0);
     const [configOpen, setConfigOpen] = useState(false);
     const [loadingConfig, setLoadingConfig] = useState(false);
 
@@ -103,8 +104,10 @@ export default function RegistrarVenta() {
         async function cargarConfig() {
             const valEnvio = await obtenerConfiguracion("costo_envio");
             const valMinimo = await obtenerConfiguracion("envio_gratis_minimo");
+            const valReducido = await obtenerConfiguracion("costo_envio_reducido");
             if (valEnvio !== null) setCostoEnvioConfig(Number(valEnvio));
             if (valMinimo !== null) setMinimoGratisConfig(Number(valMinimo));
+            if (valReducido !== null) setCostoEnvioReducidoConfig(Number(valReducido));
         }
         cargarConfig();
         // Suscribirse a cambios en tiempo real para mantener los valores sincronizados
@@ -116,10 +119,15 @@ export default function RegistrarVenta() {
             const n = Number(v);
             if (!isNaN(n)) setMinimoGratisConfig(n);
         });
+        const unsubReducido = subscribeConfiguracion("costo_envio_reducido", (v) => {
+            const n = Number(v);
+            if (!isNaN(n)) setCostoEnvioReducidoConfig(n);
+        });
 
         return () => {
-            try { unsubCosto(); } catch (e) {}
-            try { unsubMin(); } catch (e) {}
+            try { unsubCosto(); } catch (e) { }
+            try { unsubMin(); } catch (e) { }
+            try { unsubReducido(); } catch (e) { }
         };
     }, []);
 
@@ -127,12 +135,13 @@ export default function RegistrarVenta() {
 
     const guardarConfig = async () => {
         setLoadingConfig(true);
-        const [okEnvio, okMinimo] = await Promise.all([
+        const [okEnvio, okMinimo, okReducido] = await Promise.all([
             guardarConfiguracion("costo_envio", costoEnvioConfig),
-            guardarConfiguracion("envio_gratis_minimo", minimoGratisConfig)
+            guardarConfiguracion("envio_gratis_minimo", minimoGratisConfig),
+            guardarConfiguracion("costo_envio_reducido", costoEnvioReducidoConfig)
         ]);
 
-        if (okEnvio && okMinimo) {
+        if (okEnvio && okMinimo && okReducido) {
             toast.success("Configuración actualizada correctamente");
             setConfigOpen(false);
         } else {
@@ -209,10 +218,11 @@ export default function RegistrarVenta() {
 
         const configCosto = Number(costoEnvioConfig);
         const minimo = Number(minimoGratisConfig);
+        const reducido = Number(costoEnvioReducidoConfig);
 
-        if (minimo > 0 && total >= minimo) return 0;
+        if (minimo > 0 && total >= minimo) return reducido;
         return configCosto;
-    }, [tipoEntrega, total, costoEnvioConfig, minimoGratisConfig]);
+    }, [tipoEntrega, total, costoEnvioConfig, minimoGratisConfig, costoEnvioReducidoConfig]);
     const totalFinal = total + costoEnvio;
     const cambio = (pagaCon && metodoPago === "efectivo") ? (Number(pagaCon) - totalFinal) : 0;
 
@@ -824,7 +834,7 @@ export default function RegistrarVenta() {
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Envío Gratis Desde</label>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Umbral para Descuento</label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
                                         <input
@@ -834,7 +844,20 @@ export default function RegistrarVenta() {
                                             className="w-full pl-7 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium text-slate-800"
                                         />
                                     </div>
-                                    <p className="text-xs text-slate-500 mt-1.5">Monto mínimo para que el envío sea automático $0.</p>
+                                    <p className="text-xs text-slate-500 mt-1.5">Monto mínimo para aplicar el descuento.</p>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">Costo Envío con Descuento</label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+                                        <input
+                                            type="number"
+                                            value={costoEnvioReducidoConfig}
+                                            onChange={(e) => setCostoEnvioReducidoConfig(e.target.value)}
+                                            className="w-full pl-7 pr-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none transition-all font-medium text-slate-800"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1.5">Si es $0, el envío será gratis al superar el umbral.</p>
                                 </div>
                                 <div className="pt-2 flex gap-3">
                                     <button

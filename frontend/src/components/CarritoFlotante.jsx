@@ -15,6 +15,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
   const [costoEnvio, setCostoEnvio] = useState(0);
   const [costoEnvioConfig, setCostoEnvioConfig] = useState(2000); // Valor por defecto visual
   const [minimoGratisConfig, setMinimoGratisConfig] = useState(0);
+  const [costoEnvioReducidoConfig, setCostoEnvioReducidoConfig] = useState(0);
   const [pago, setPago] = useState("efectivo");
   const [cambio, setCambio] = useState("");
   const modalRef = useRef(null);
@@ -37,9 +38,11 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
     async function cargarConfig() {
       const valEnvio = await obtenerConfiguracion("costo_envio");
       const valMinimo = await obtenerConfiguracion("envio_gratis_minimo");
+      const valReducido = await obtenerConfiguracion("costo_envio_reducido");
       if (!isMounted) return;
       if (valEnvio !== null) setCostoEnvioConfig(Number(valEnvio));
       if (valMinimo !== null) setMinimoGratisConfig(Number(valMinimo));
+      if (valReducido !== null) setCostoEnvioReducidoConfig(Number(valReducido));
     }
     cargarConfig();
 
@@ -59,10 +62,19 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
       }
     });
 
+    const unsubReducido = subscribeConfiguracion("costo_envio_reducido", (val) => {
+      try {
+        if (val !== null) setCostoEnvioReducidoConfig(Number(val));
+      } catch (err) {
+        console.error('Error al actualizar costo_envio_reducido realtime', err);
+      }
+    });
+
     return () => {
       isMounted = false;
       if (typeof unsubEnvio === 'function') unsubEnvio();
       if (typeof unsubMinimo === 'function') unsubMinimo();
+      if (typeof unsubReducido === 'function') unsubReducido();
     };
   }, []);
 
@@ -72,11 +84,11 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
       costo = costoEnvioConfig;
       // Si hay umbral de envío gratis y se supera
       if (minimoGratisConfig > 0 && total >= minimoGratisConfig) {
-        costo = 0;
+        costo = costoEnvioReducidoConfig;
       }
     }
     setCostoEnvio(costo);
-  }, [entrega, costoEnvioConfig, minimoGratisConfig, total]);
+  }, [entrega, costoEnvioConfig, minimoGratisConfig, costoEnvioReducidoConfig, total]);
 
   const toggleModal = () => setIsOpen(!isOpen);
   const abrirCheckout = () => {
@@ -168,7 +180,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
       const mensaje = `¡HOLA! Quiero hacer un pedido en *MiniMarket del Café*
 
     *Cliente:* ${cliente.nombre.trim()}
-    ${entrega === "domicilio" ? `*Dirección:* ${cliente.direccion.trim()}\n*Entrega:* Domicilio (+$2.000)` : "*Entrega:* Recoger en tienda"}
+    ${entrega === "domicilio" ? `*Dirección:* ${cliente.direccion.trim()}\n*Entrega:* Domicilio (+${costoEnvio === 0 ? "GRATIS" : "$" + Number(costoEnvio).toLocaleString("es-CO")})` : "*Entrega:* Recoger en tienda"}
 
     *Método de pago:*
     ${pago === "efectivo"
@@ -185,6 +197,7 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
 
     *Subtotal:* $${total.toLocaleString("es-CO")}
     ${entrega === "domicilio" && costoEnvio === 0 && minimoGratisConfig > 0 ? "🎉 *¡Envío Gratis Aplicado!*\n" : ""}
+    ${entrega === "domicilio" && costoEnvio > 0 && costoEnvio < costoEnvioConfig ? "🎉 *¡Envío con Descuento!*\n" : ""}
     ${costoEnvio > 0 ? `*Envío:* $${costoEnvio.toLocaleString("es-CO")}\n` : ""}*TOTAL A PAGAR:* *$${totalFinal.toLocaleString("es-CO")}*
 
     ${pago === "efectivo"
@@ -406,12 +419,16 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                             {costoEnvio === 0 && minimoGratisConfig > 0 && total >= minimoGratisConfig ? (
                               <span className="text-emerald-600 font-bold">¡Gratis!</span>
                             ) : (
-                              `Te lo llevamos donde estés • +$${Number(costoEnvioConfig).toLocaleString("es-CO")}`
+                              total >= minimoGratisConfig && minimoGratisConfig > 0 && costoEnvio < costoEnvioConfig ? (
+                                <span className="text-emerald-600 font-bold">¡Con descuento! ${Number(costoEnvio).toLocaleString("es-CO")}</span>
+                              ) : (
+                                `Te lo llevamos donde estés • +$${Number(costoEnvioConfig).toLocaleString("es-CO")}`
+                              )
                             )}
                           </p>
                           {minimoGratisConfig > 0 && total < minimoGratisConfig && (
                             <p className="text-xs text-indigo-500 mt-1">
-                              ¡Gratis por compras desde ${Number(minimoGratisConfig).toLocaleString("es-CO")}!
+                              ¡Descuento en envío por compras desde ${Number(minimoGratisConfig).toLocaleString("es-CO")}!
                             </p>
                           )}
                         </div>
@@ -542,7 +559,9 @@ export default function CarritoFlotante({ carrito, setCarrito }) {
                     <p className="text-sm text-center text-gray-600">
                       {costoEnvio === 0 && minimoGratisConfig > 0 && total >= minimoGratisConfig
                         ? "¡Envío gratis aplicado!"
-                        : "Incluye envío a domicilio"}
+                        : total >= minimoGratisConfig && minimoGratisConfig > 0 && costoEnvio < costoEnvioConfig
+                          ? "¡Descuento en envío aplicado!"
+                          : "Incluye envío a domicilio"}
                     </p>
                   </div>
                 )}
