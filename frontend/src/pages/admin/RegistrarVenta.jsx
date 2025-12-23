@@ -675,7 +675,7 @@ export default function RegistrarVenta() {
                                         />
                                         {minimoGratisConfig > 0 && (
                                             <div className="text-xs text-center text-slate-500 bg-slate-50 p-1.5 rounded border border-slate-100">
-                                                Envío gratis por compras &gt; <span className="font-bold text-slate-700">${minimoGratisConfig.toLocaleString()}</span>
+                                                Descuento en envío por compras &gt; <span className="font-bold text-slate-700">${minimoGratisConfig.toLocaleString()}</span>
                                             </div>
                                         )}
                                     </div>
